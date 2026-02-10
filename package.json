@@ -18,7 +18,7 @@
 	"dependencies": {
 		"@entur/grid": "^0.3.70",
 		"@entur/icons": "^8.4.0",
-		"@entur/layout": "^3.3.1",
+		"@entur/layout": "^3.4.0",
 		"@entur/tooltip": "^5.3.1",
 		"@entur/travel": "^6.5.1",
 		"@entur/typography": "^2.1.1",
