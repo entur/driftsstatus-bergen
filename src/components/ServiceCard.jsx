@@ -1,7 +1,7 @@
 import React from 'react';
 import { Heading, Text } from '@entur/typography/beta';
 import { semantic } from '@entur/tokens';
-import { deployLabel, deployColorKey, timeAgo } from '../lib/statusFormat.js';
+import { deployLabel, combineSeverity, formatMs, formatPct, timeAgo } from '../lib/statusFormat.js';
 
 const DOT = {
     success: semantic.fill.success.default,
@@ -11,8 +11,9 @@ const DOT = {
 };
 
 export default function ServiceCard({ service, now = new Date() }) {
-    const { deploy } = service;
-    const colorKey = deployColorKey(deploy.state);
+    const { deploy, health } = service;
+    const colorKey = combineSeverity(deploy.state, health.state);
+    const showMetrics = health.state !== 'unknown';
     return (
         <div style={{
             background: 'white', borderRadius: 12, padding: '20px 24px',
@@ -27,6 +28,11 @@ export default function ServiceCard({ service, now = new Date() }) {
             {deploy.sha && (
                 <Text variant="caption" margin="none">
                     {deploy.sha}{deploy.at ? ` · ${timeAgo(deploy.at, now)}` : ''}
+                </Text>
+            )}
+            {showMetrics && (
+                <Text variant="caption" margin="none">
+                    {`p95 ${formatMs(health.p95Ms)} · 5xx ${formatPct(health.errorRate5xx)} · 4xx ${formatPct(health.errorRate4xx)}`}
                 </Text>
             )}
         </div>
