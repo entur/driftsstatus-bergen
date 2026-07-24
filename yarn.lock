@@ -272,7 +272,7 @@
   dependencies:
     "@entur/tokens" "^3.24.0"
 
-"@entur/layout@^3.3.1", "@entur/layout@^3.7.0", "@entur/layout@^3.7.5":
+"@entur/layout@^3.7.0", "@entur/layout@^3.7.5":
   version "3.7.5"
   resolved "https://registry.yarnpkg.com/@entur/layout/-/layout-3.7.5.tgz#32e3e6049077f30070b27625161e1e0a6df7b3e3"
   integrity sha512-cUR5wyxOA/+4Fpt1rlLzJ2wz5Uwv8j+gSmL1Qjfxc8c/Vly1BlWqKe+Xsvmk5hoSzvPDkt62QSQfDYf0c50uIw==
