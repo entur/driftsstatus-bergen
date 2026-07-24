@@ -56,3 +56,18 @@ export function formatPct(frac) {
     if (frac === null || frac === undefined) return '–';
     return `${(frac * 100).toFixed(1).replace('.', ',')} %`;
 }
+
+const ENV_STATE_LABELS = {
+    in_progress: 'deployer …',
+    failure: 'feilet',
+    unknown: 'ingen data'
+};
+export function envStateLabel(state) {
+    return ENV_STATE_LABELS[state] ?? '';
+}
+
+export function deployRef(env) {
+    if (env.ticket) return env.ticket;
+    if (env.pr) return `PR: ${env.pr}`;
+    return '';
+}

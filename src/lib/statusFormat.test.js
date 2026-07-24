@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct } from './statusFormat.js';
+import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef } from './statusFormat.js';
 
 describe('isStale', () => {
     const now = new Date('2026-07-24T10:00:00Z');
@@ -79,5 +79,28 @@ describe('formatPct', () => {
     });
     it('null gir tankestrek', () => {
         expect(formatPct(null)).toBe('–');
+    });
+});
+
+describe('envStateLabel', () => {
+    it('gir norsk tekst for ikke-success states', () => {
+        expect(envStateLabel('in_progress')).toBe('deployer …');
+        expect(envStateLabel('failure')).toBe('feilet');
+        expect(envStateLabel('unknown')).toBe('ingen data');
+    });
+    it('gir tom streng for success', () => {
+        expect(envStateLabel('success')).toBe('');
+    });
+});
+
+describe('deployRef', () => {
+    it('foretrekker ETU-nummer', () => {
+        expect(deployRef({ ticket: 'ETU-73549', pr: 411 })).toBe('ETU-73549');
+    });
+    it('faller tilbake til PR-nummer', () => {
+        expect(deployRef({ ticket: null, pr: 432 })).toBe('PR: 432');
+    });
+    it('gir tom streng når begge mangler', () => {
+        expect(deployRef({ ticket: null, pr: null })).toBe('');
     });
 });
