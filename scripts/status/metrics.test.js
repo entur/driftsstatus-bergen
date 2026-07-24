@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildQueries, parseInstantVector, computeHealth, WARN_5XX, CRIT_5XX, UNKNOWN_HEALTH } from './metrics.js';
+import { buildQueries, parseInstantVector, computeHealth, WARN_5XX, CRIT_5XX, UNKNOWN_HEALTH, fetchMetrics } from './metrics.js';
 
 const svc = {
     name: 'products-api',
@@ -67,5 +67,42 @@ describe('computeHealth', () => {
     });
     it('unknown når ingen data', () => {
         expect(computeHealth({ up: null, p95Ms: null, fivexx: null, fourxx: null, total: null }, t).state).toBe('unknown');
+    });
+});
+
+describe('fetchMetrics', () => {
+    const svc = { name: 'a', metricsProject: 'ent-products-prd', metricsSelector: { namespace: 'products' } };
+    const vec = (v) => ({ status: 'success', data: { resultType: 'vector', result: [{ metric: {}, value: [1, String(v)] }] } });
+
+    it('samler helse fra fem queries', async () => {
+        const queryFn = async (_project, promql) => {
+            if (promql.includes('up{')) return vec(2);
+            if (promql.includes('histogram_quantile')) return vec(150);
+            if (promql.includes('status=~"5..')) return vec(0.05);
+            if (promql.includes('status=~"4..')) return vec(0.1);
+            return vec(10); // total
+        };
+        const h = await fetchMetrics(svc, queryFn);
+        expect(h.up).toBe(true);
+        expect(h.p95Ms).toBe(150);
+        expect(h.errorRate5xx).toBeCloseTo(0.005);
+        expect(h.errorRate4xx).toBeCloseTo(0.01);
+        expect(h.state).toBe('up');
+    });
+
+    it('en feilende query gir null for det feltet, ikke krasj', async () => {
+        const queryFn = async (_project, promql) => {
+            if (promql.includes('histogram_quantile')) throw new Error('boom');
+            if (promql.includes('up{')) return vec(1);
+            return vec(0); // rates + total 0
+        };
+        const h = await fetchMetrics(svc, queryFn);
+        expect(h.p95Ms).toBeNull();
+        expect(h.up).toBe(true);
+    });
+
+    it('up=0 gir up=false', async () => {
+        const h = await fetchMetrics(svc, async () => vec(0));
+        expect(h.up).toBe(false);
     });
 });

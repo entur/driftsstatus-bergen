@@ -1,8 +1,7 @@
 import { selectDeployRun, buildDeploy } from './deploy.js';
+import { UNKNOWN_HEALTH } from './metrics.js';
 
-const UNKNOWN_HEALTH = { state: 'unknown', errorRate: null, p95Ms: null };
-
-export async function buildStatusJson(services, fetchRuns, generatedAt) {
+export async function buildStatusJson(services, fetchRuns, fetchHealth, generatedAt) {
     const results = await Promise.all(
         services.map(async (svc) => {
             let deploy;
@@ -13,7 +12,13 @@ export async function buildStatusJson(services, fetchRuns, generatedAt) {
             } catch {
                 deploy = buildDeploy(null, svc.repo);
             }
-            return { name: svc.name, repo: svc.repo, deploy, health: { ...UNKNOWN_HEALTH } };
+            let health;
+            try {
+                health = await fetchHealth(svc);
+            } catch {
+                health = { ...UNKNOWN_HEALTH };
+            }
+            return { name: svc.name, repo: svc.repo, deploy, health };
         })
     );
     return { generatedAt, services: results };

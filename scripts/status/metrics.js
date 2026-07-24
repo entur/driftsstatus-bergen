@@ -50,3 +50,19 @@ export function computeHealth({ up, p95Ms, fivexx, fourxx, total }, { warn, crit
     }
     return { state, up, p95Ms, errorRate5xx, errorRate4xx };
 }
+
+export async function fetchMetrics(service, queryFn) {
+    const q = buildQueries(service);
+    const get = async (promql) => {
+        try {
+            return parseInstantVector(await queryFn(service.metricsProject, promql));
+        } catch {
+            return null;
+        }
+    };
+    const [upVal, p95Ms, fivexx, fourxx, total] = await Promise.all([
+        get(q.up), get(q.p95), get(q.fivexx), get(q.fourxx), get(q.total)
+    ]);
+    const up = upVal === null ? null : upVal > 0;
+    return computeHealth({ up, p95Ms, fivexx, fourxx, total }, { warn: WARN_5XX, crit: CRIT_5XX });
+}
