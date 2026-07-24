@@ -1,0 +1,46 @@
+name: Collect service status
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: status-collector
+  cancel-in-progress: true
+
+env:
+  BUCKET: ent-statusber-prd-status
+
+jobs:
+  collect:
+    name: Collect and publish status.json
+    runs-on: ubuntu-24.04
+    environment: prd
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Collect status
+        env:
+          GH_TOKEN: ${{ secrets.STATUS_GH_TOKEN }}
+        run: node scripts/collect-status.mjs
+
+      - name: Authenticate to Google Cloud (keyless)
+        uses: entur/gha-meta/.github/actions/cloud-auth@v1
+        with:
+          environment: prd
+          cloud_provider: gcp
+          gcp_workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          gcp_service_account: ${{ vars.SERVICE_ACCOUNT }}
+
+      - name: Upload to GCS
+        run: |
+          gcloud storage cp status.json gs://${BUCKET}/status.json \
+            --cache-control=no-cache

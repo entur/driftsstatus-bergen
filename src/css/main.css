@@ -5,3 +5,14 @@
 @import '@entur/typography/dist/styles.css';
 @import '@entur/grid/dist/styles.css';
 @import '@entur/tokens/dist/base.css';
+
+@keyframes ticker-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.ticker-track {
+    display: inline-flex;
+    white-space: nowrap;
+    will-change: transform;
+    animation: ticker-scroll 40s linear infinite;
+}
