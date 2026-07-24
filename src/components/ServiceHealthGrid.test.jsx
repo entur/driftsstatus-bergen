@@ -3,7 +3,19 @@ import { render, screen } from '@testing-library/react';
 import ServiceHealthGrid from './ServiceHealthGrid.jsx';
 
 const now = new Date('2026-07-24T10:00:00Z');
-const svc = (name) => ({ name, repo: `entur/${name}`, deploy: { state: 'success', sha: 'abc1234', at: '2026-07-24T09:55:00Z', url: 'https://x', version: null }, health: { state: 'unknown', errorRate: null, p95Ms: null } });
+const svc = (name) => ({
+    name,
+    repo: `entur/${name}`,
+    deploy: {
+        state: 'success',
+        environments: [
+            { env: 'prd', state: 'success', sha: 'abc1234', at: '2026-07-24T09:55:00Z', ticket: null, pr: null, url: 'https://x' },
+            { env: 'tst', state: 'success', sha: 'abc1234', at: '2026-07-24T09:55:00Z', ticket: null, pr: null, url: 'https://x' },
+            { env: 'dev', state: 'success', sha: 'abc1234', at: '2026-07-24T09:55:00Z', ticket: null, pr: null, url: 'https://x' }
+        ]
+    },
+    health: { state: 'unknown', errorRate: null, p95Ms: null }
+});
 
 describe('ServiceHealthGrid', () => {
     it('rendrer ett kort per tjeneste', () => {
