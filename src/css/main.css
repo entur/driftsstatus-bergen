@@ -16,3 +16,30 @@
     will-change: transform;
     animation: ticker-scroll 40s linear infinite;
 }
+.ticker-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+}
+.ticker-label {
+    flex: 0 0 auto;
+    font-weight: 700;
+    padding: 10px 24px;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255, 255, 255, 0.35);
+}
+.ticker-scroll-wrap {
+    flex: 1 1 0%;
+    min-width: 0;
+    overflow: hidden;
+    padding: 10px 0;
+}
+.ticker-item {
+    padding: 0 32px;
+    font-size: 1rem;
+}
+.ticker-static {
+    padding: 0 24px;
+    font-size: 1rem;
+}
