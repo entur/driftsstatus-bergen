@@ -6,7 +6,9 @@ const GH_API = 'https://api.github.com';
 const token = process.env.GH_TOKEN;
 
 async function fetchRuns(repo, branch) {
-    const url = `${GH_API}/repos/${repo}/actions/runs?branch=${branch}&per_page=30`;
+    // per_page=100 (maks GitHub tillater) for å redusere sjansen for at siste
+    // relevante run faller utenfor sida på et travelt repo med mange workflows.
+    const url = `${GH_API}/repos/${repo}/actions/runs?branch=${branch}&per_page=100`;
     const headers = {
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28'

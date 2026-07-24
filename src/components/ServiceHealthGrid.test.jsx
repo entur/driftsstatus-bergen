@@ -23,4 +23,8 @@ describe('ServiceHealthGrid', () => {
         render(<ServiceHealthGrid now={now} status={null} />);
         expect(screen.getByText(/laster/i)).toBeInTheDocument();
     });
+    it('viser feilmelding når status er null og error er satt', () => {
+        render(<ServiceHealthGrid now={now} status={null} error={true} />);
+        expect(screen.getByText(/kunne ikke hente status/i)).toBeInTheDocument();
+    });
 });

@@ -14,6 +14,7 @@ const REFRESH_MS = 5 * 60 * 1000;
 
 function App() {
     const [status, setStatus] = useState(null);
+    const [statusError, setStatusError] = useState(false);
     const [rssItems, setRssItems] = useState([]);
 
     useEffect(() => {
@@ -21,8 +22,12 @@ function App() {
         async function load() {
             try {
                 const s = await fetchStatus(STATUS_URL);
-                if (!cancelled) setStatus(s);
+                if (!cancelled) {
+                    setStatus(s);
+                    setStatusError(false);
+                }
             } catch (e) {
+                if (!cancelled) setStatusError(true);
                 // behold forrige visning ved feil
             }
             try {
@@ -30,7 +35,7 @@ function App() {
                 const text = await res.text();
                 if (!cancelled) setRssItems(parseRssTitles(text));
             } catch (e) {
-                if (!cancelled) setRssItems([]);
+                // behold forrige visning ved feil
             }
         }
         load();
@@ -47,7 +52,7 @@ function App() {
             </Contrast>
 
             <div style={{ flex: '1 1 0%', minHeight: 0, background: semantic.fill.background.secondary?.default || '#f2f2f2' }}>
-                <ServiceHealthGrid status={status} />
+                <ServiceHealthGrid status={status} error={statusError} />
             </div>
 
             <div style={{ flex: '0 0 auto' }}>

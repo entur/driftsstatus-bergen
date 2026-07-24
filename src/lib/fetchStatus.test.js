@@ -11,4 +11,8 @@ describe('fetchStatus', () => {
         const fakeFetch = async () => ({ ok: false, status: 500 });
         await expect(fetchStatus('http://x', fakeFetch)).rejects.toThrow('500');
     });
+    it('kaster når services mangler', async () => {
+        const fakeFetch = async () => ({ ok: true, json: async () => ({ generatedAt: 'x' }) });
+        await expect(fetchStatus('http://x', fakeFetch)).rejects.toThrow(/ugyldig form/);
+    });
 });

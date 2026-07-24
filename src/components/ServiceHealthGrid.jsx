@@ -3,9 +3,15 @@ import { Text } from '@entur/typography/beta';
 import ServiceCard from './ServiceCard.jsx';
 import { isStale } from '../lib/statusFormat.js';
 
-export default function ServiceHealthGrid({ status, now = new Date() }) {
+export default function ServiceHealthGrid({ status, now = new Date(), error = false }) {
     if (!status) {
-        return <div style={{ padding: 40 }}><Text variant="body">Laster status …</Text></div>;
+        return (
+            <div style={{ padding: 40 }}>
+                <Text variant="body">
+                    {error ? 'Kunne ikke hente status – prøver igjen …' : 'Laster status …'}
+                </Text>
+            </div>
+        );
     }
     const stale = isStale(status.generatedAt, now);
     return (
@@ -18,7 +24,7 @@ export default function ServiceHealthGrid({ status, now = new Date() }) {
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: 16, alignContent: 'start', overflow: 'hidden'
+                gap: 16, alignContent: 'start', overflow: 'auto'
             }}>
                 {status.services.map((svc) => (
                     <ServiceCard key={svc.name} service={svc} now={now} />
