@@ -1,3 +1,4 @@
+// scripts/collect-status.mjs (erstatt hele filen)
 import { writeFile } from 'node:fs/promises';
 import { SERVICES } from './status/services.js';
 import { buildStatusJson } from './status/buildStatus.js';
@@ -7,20 +8,33 @@ const GH_API = 'https://api.github.com';
 const token = process.env.GH_TOKEN;
 const gcpToken = process.env.GCP_TOKEN;
 
-async function fetchRuns(repo, branch) {
-    // per_page=100 (maks GitHub tillater) for å redusere sjansen for at siste
-    // relevante run faller utenfor sida på et travelt repo med mange workflows.
-    const url = `${GH_API}/repos/${repo}/actions/runs?branch=${branch}&per_page=100`;
-    const headers = {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
-    };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`GitHub API ${res.status} for ${repo}`);
-    const body = await res.json();
-    return body.workflow_runs ?? [];
+const ghHeaders = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+};
+
+async function ghJson(path) {
+    const res = await fetch(`${GH_API}${path}`, { headers: ghHeaders });
+    if (!res.ok) throw new Error(`GitHub API ${res.status} for ${path}`);
+    return res.json();
 }
+
+const deployFetchers = {
+    async listDeployments(repo, env) {
+        const arr = await ghJson(`/repos/${repo}/deployments?environment=${env}&per_page=10`);
+        return arr.map((d) => ({ id: d.id, sha: d.sha, created_at: d.created_at }));
+    },
+    async getStatus(repo, id) {
+        const arr = await ghJson(`/repos/${repo}/deployments/${id}/statuses?per_page=1`);
+        const s = arr[0];
+        return s ? { state: s.state, at: s.created_at, url: s.log_url || s.target_url } : null;
+    },
+    async getCommitMessage(repo, sha) {
+        const c = await ghJson(`/repos/${repo}/commits/${sha}`);
+        return c.commit?.message ?? null;
+    }
+};
 
 async function queryPrometheus(project, promql) {
     const url = `https://monitoring.googleapis.com/v1/projects/${project}/location/global/prometheus/api/v1/query`;
@@ -43,7 +57,7 @@ async function main() {
     }
 
     const outputPath = process.env.STATUS_OUTPUT || 'status.json';
-    const status = await buildStatusJson(SERVICES, fetchRuns, fetchHealth, new Date().toISOString());
+    const status = await buildStatusJson(SERVICES, deployFetchers, fetchHealth, new Date().toISOString());
     await writeFile(outputPath, JSON.stringify(status, null, 2));
     console.log(`Skrev ${outputPath} med ${status.services.length} tjenester.`);
 }
