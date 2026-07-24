@@ -5,7 +5,8 @@ import {
     extractTicket,
     extractPr,
     buildDeployEnvironment,
-    buildDeploy
+    buildDeploy,
+    fetchDeployEnvironments
 } from './deployEnvironments.js';
 
 describe('mapDeploymentState', () => {
@@ -121,6 +122,54 @@ describe('buildDeploy', () => {
     });
     it('gir unknown headline når prd mangler', () => {
         const deploy = buildDeploy([dev, tst]);
+        expect(deploy.state).toBe('unknown');
+    });
+});
+
+describe('fetchDeployEnvironments', () => {
+    const service = { name: 'svc', repo: 'entur/svc', environments: ['prd'] };
+
+    it('hopper over deploy som avventer godkjenning', async () => {
+        const fetchers = {
+            listDeployments: async () => [
+                { id: 2, sha: 'newnew0', created_at: '2026-07-24T09:00:00Z' },
+                { id: 1, sha: 'oldold0', created_at: '2026-07-01T09:00:00Z' }
+            ],
+            getStatus: async (repo, id) => id === 2
+                ? { state: 'waiting', at: '2026-07-24T09:01:00Z', url: 'https://x/2' }
+                : { state: 'success', at: '2026-07-01T09:01:00Z', url: 'https://x/1' },
+            getCommitMessage: async () => 'fix: noe (ETU-5) (#3)'
+        };
+        const deploy = await fetchDeployEnvironments(service, fetchers);
+        const prd = deploy.environments[0];
+        expect(prd.sha).toBe('oldold0');
+        expect(prd.state).toBe('success');
+        expect(prd.at).toBe('2026-07-01T09:01:00Z');
+        expect(prd.ticket).toBe('ETU-5');
+        expect(prd.pr).toBe(3);
+        expect(deploy.state).toBe('success');
+    });
+
+    it('gir unknown for miljø når status-henting feiler', async () => {
+        const fetchers = {
+            listDeployments: async () => [{ id: 1, sha: 'aaaaaaa', created_at: '2026-07-24T09:00:00Z' }],
+            getStatus: async () => { throw new Error('boom'); },
+            getCommitMessage: async () => ''
+        };
+        const deploy = await fetchDeployEnvironments(service, fetchers);
+        expect(deploy.environments[0].state).toBe('unknown');
+        expect(deploy.state).toBe('unknown');
+    });
+
+    it('gir unknown når det ikke finnes deployments', async () => {
+        const fetchers = {
+            listDeployments: async () => [],
+            getStatus: async () => null,
+            getCommitMessage: async () => ''
+        };
+        const deploy = await fetchDeployEnvironments({ repo: 'entur/svc', environments: ['dev', 'tst', 'prd'] }, fetchers);
+        expect(deploy.environments.map((e) => e.env)).toEqual(['prd', 'tst', 'dev']);
+        expect(deploy.environments.every((e) => e.state === 'unknown')).toBe(true);
         expect(deploy.state).toBe('unknown');
     });
 });

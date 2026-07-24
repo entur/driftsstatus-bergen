@@ -51,3 +51,38 @@ export function buildDeploy(environments) {
     const prd = sorted.find((e) => e.env === 'prd');
     return { state: prd ? prd.state : 'unknown', environments: sorted };
 }
+
+export async function fetchDeployEnvironments(service, fetchers) {
+    const envs = service.environments ?? ['dev', 'tst', 'prd'];
+    const results = await Promise.all(envs.map(async (env) => {
+        try {
+            const deployments = await fetchers.listDeployments(service.repo, env);
+            const entries = [];
+            for (const d of deployments) {
+                const status = await fetchers.getStatus(service.repo, d.id);
+                entries.push({
+                    deployment: d,
+                    statusState: status?.state ?? null,
+                    statusAt: status?.at ?? null,
+                    statusUrl: status?.url ?? null
+                });
+                if (status && status.state !== 'waiting') break;
+            }
+            const chosen = selectLatestDeployment(entries);
+            if (!chosen) return buildDeployEnvironment({ env, sha: null, repo: service.repo });
+            const commitMessage = await fetchers.getCommitMessage(service.repo, chosen.deployment.sha);
+            return buildDeployEnvironment({
+                env,
+                sha: chosen.deployment.sha,
+                at: chosen.statusAt ?? chosen.deployment.created_at,
+                statusState: chosen.statusState,
+                commitMessage,
+                url: chosen.statusUrl,
+                repo: service.repo
+            });
+        } catch {
+            return buildDeployEnvironment({ env, sha: null, repo: service.repo });
+        }
+    }));
+    return buildDeploy(results);
+}
