@@ -172,4 +172,20 @@ describe('fetchDeployEnvironments', () => {
         expect(deploy.environments.every((e) => e.state === 'unknown')).toBe(true);
         expect(deploy.state).toBe('unknown');
     });
+
+    it('lar feil i ett miljø gi unknown uten å påvirke de andre', async () => {
+        const fetchers = {
+            listDeployments: async (repo, env) => {
+                if (env === 'tst') throw new Error('boom');
+                return [{ id: 1, sha: 'aaaaaaa', created_at: '2026-07-24T09:00:00Z' }];
+            },
+            getStatus: async () => ({ state: 'success', at: '2026-07-24T09:01:00Z', url: 'https://x/1' }),
+            getCommitMessage: async () => 'fix (ETU-9) (#3)'
+        };
+        const deploy = await fetchDeployEnvironments({ repo: 'entur/svc', environments: ['prd', 'tst'] }, fetchers);
+        const prd = deploy.environments.find((e) => e.env === 'prd');
+        const tst = deploy.environments.find((e) => e.env === 'tst');
+        expect(prd.state).toBe('success');
+        expect(tst.state).toBe('unknown');
+    });
 });
