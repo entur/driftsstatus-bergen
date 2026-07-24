@@ -1,0 +1,6 @@
+apiVersion: orchestrator.entur.io/github/v1
+kind: GitHubActions
+metadata:
+  id: driftsstatus-bergen
+spec:
+  environments: [prd]
