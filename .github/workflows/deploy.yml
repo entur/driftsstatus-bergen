@@ -1,0 +1,52 @@
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/**
+      - public/**
+      - index.html
+      - package.json
+      - yarn.lock
+      - vite.config.js
+      - firebase.json
+      - .firebaserc
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prd
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy (prd)
+    runs-on: ubuntu-24.04
+    environment: prd
+    permissions:
+      contents: read
+      id-token: write          # kreves for nøkkelløs Workload Identity-auth
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22      # firebase-tools støtter 20/22/24 — unngår Node 26-engines-problemet
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Authenticate to Google Cloud (keyless)
+        uses: entur/gha-meta/.github/actions/cloud-auth@v1
+        with:
+          environment: prd
+          cloud_provider: gcp
+          gcp_workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          gcp_service_account: ${{ vars.SERVICE_ACCOUNT }}
+
+      - name: Deploy to Firebase Hosting
+        run: yarn firebase deploy --only hosting --project ent-statusber-prd --non-interactive
