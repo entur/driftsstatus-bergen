@@ -2422,7 +2422,7 @@ __metadata:
     "@entur/layout": ^3.7.5
     "@entur/tooltip": ^5.3.1
     "@entur/travel": ^6.5.1
-    "@entur/typography": ^2.1.1
+    "@entur/typography": ^2.1.12
     "@tailwindcss/vite": ^4.1.18
     "@types/react": ^19.2.8
     "@types/react-dom": ^19.2.3
