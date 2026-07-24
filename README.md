@@ -38,10 +38,9 @@ go to https://stunor92.github.io/entur-tavla/ or https://entur.sturle.dev/
 
 ## Driftstatus-collector (fase 1)
 
-En planlagt GitHub Action (`.github/workflows/status-collector.yml`) henter deploy-status og publiserer `status.json` til GCS-bucketen `ent-statusber-prd-status`.
+En planlagt GitHub Action (`.github/workflows/status-collector.yml`) kjører hvert 5. minutt, henter siste deploy-status per tjeneste fra GitHub API, skriver `public/status.json` og publiserer siten via Firebase Hosting (samme keyless-auth som `deploy.yml`). Frontend leser `status.json` fra samme domene — ingen egen bucket eller CORS.
 
-Forutsetninger som må settes opp manuelt én gang:
-1. GCS-bucketen med offentlig lesing + CORS (se `infra/gcs-cors.json`) og skrivetilgang for CI-tjenestekontoen.
-2. Repo-secret `STATUS_GH_TOKEN` med Actions:read på `entur/products-api`, `entur/products-spring`, `entur/distribution-channels-api`.
+Forutsetning som må settes opp manuelt én gang:
+- Repo-secret `STATUS_GH_TOKEN` med **Actions: read** på `entur/products-api`, `entur/products-spring`, `entur/distribution-channels-api`. (GCP workload identity for Firebase-deploy er allerede satt opp for `deploy.yml`.)
 
 Merk: workflowen må ligge på `main` før `schedule`/`workflow_dispatch` virker.

@@ -7,8 +7,7 @@ import StatusTicker from './components/StatusTicker.jsx';
 import { fetchStatus } from './lib/fetchStatus.js';
 import { parseRssTitles } from './lib/parseRssTitles.js';
 
-const STATUS_URL = import.meta.env.VITE_STATUS_URL
-    || 'https://storage.googleapis.com/ent-statusber-prd-status/status.json';
+const STATUS_URL = import.meta.env.VITE_STATUS_URL || '/status.json';
 const RSS_URL = 'https://status.entur.org/history.rss';
 const REFRESH_MS = 5 * 60 * 1000;
 

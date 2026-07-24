@@ -6,6 +6,7 @@ node_modules
 /dist
 /build
 status.json
+public/status.json
 
 # OS
 .DS_Store

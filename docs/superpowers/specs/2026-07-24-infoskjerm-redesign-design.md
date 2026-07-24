@@ -3,6 +3,16 @@
 **Dato:** 2026-07-24
 **Status:** Godkjent design (fase 1 klar for planlegging)
 
+> **Addendum 2026-07-24 (etter implementering):** Publiseringsmekanismen ble
+> endret fra offentlig GCS-bucket (valg A) til **servering via Firebase
+> Hosting**. Årsak: en `allUsers`-lesbar bucket er sannsynligvis blokkert av
+> Entur org-policy (domenebegrenset deling), og policyen lot seg ikke verifisere
+> billig (Org Policy API avslått). Collectoren skriver nå `public/status.json`
+> og re-deployer den lille statiske siten via Firebase (samme keyless-auth som
+> `deploy.yml`); frontend leser `/status.json` fra samme domene. Ingen bucket,
+> ingen CORS, ingen `allUsers`. Eneste manuelle forutsetning er secret
+> `STATUS_GH_TOKEN`. Seksjonene under beskriver det opprinnelige bucket-valget.
+
 ## Bakgrunn og mål
 
 `driftsstatus-bergen` er en fullskjerms kontorskjerm for team-produkt i Bergen.

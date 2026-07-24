@@ -24,9 +24,10 @@ async function main() {
     if (!token) {
         console.warn('GH_TOKEN mangler — deploy-status blir "unknown" for alle tjenester.');
     }
+    const outputPath = process.env.STATUS_OUTPUT || 'status.json';
     const status = await buildStatusJson(SERVICES, fetchRuns, new Date().toISOString());
-    await writeFile('status.json', JSON.stringify(status, null, 2));
-    console.log(`Skrev status.json med ${status.services.length} tjenester.`);
+    await writeFile(outputPath, JSON.stringify(status, null, 2));
+    console.log(`Skrev ${outputPath} med ${status.services.length} tjenester.`);
 }
 
 main().catch((err) => {
