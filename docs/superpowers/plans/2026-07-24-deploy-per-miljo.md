@@ -524,10 +524,11 @@ git commit -m "refactor: buildStatusJson bruker deploy-status per miljø"
 - [ ] **Step 1: Write the failing test**
 
 ```js
-// i src/lib/statusFormat.test.js: utvid import-linjen og legg til nye describe-blokker.
+// i src/lib/statusFormat.test.js: utvid import-linjen med envStateLabel, deployRef
+// (behold ALLE eksisterende importer — fase 2 har lagt til healthColorKey/combineSeverity/formatMs/formatPct).
 // Import-linjen skal være:
-//   import { isStale, deployLabel, deployColorKey, timeAgo, envStateLabel, deployRef } from './statusFormat.js';
-// Behold eksisterende describe-blokker uendret; legg til:
+//   import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef } from './statusFormat.js';
+// Behold alle eksisterende describe-blokker uendret; legg til:
 
 describe('envStateLabel', () => {
     it('gir norsk tekst for ikke-success states', () => {
@@ -599,20 +600,23 @@ git commit -m "feat: statusFormat-hjelpere for miljø-rader (envStateLabel, depl
 - Modify: `src/components/ServiceCard.jsx`
 - Modify: `src/components/ServiceCard.test.jsx` (skriv om)
 
+**Integrasjon med fase 2:** `ServiceCard.jsx` er allerede endret av fase 2 til å bruke `combineSeverity(deploy.state, health.state)` for topp-prikken og vise en metrikk-linje (`p95 … · 5xx … · 4xx …`) når `health.state != 'unknown'`. Denne oppgaven **beholder begge**, og bytter kun ut deploy-visningen (enkelt `deployLabel` + `deploy.sha`-linje) med per-miljø-rader. `deploy.state` (= prd) mater fortsatt `combineSeverity`.
+
 **Interfaces:**
-- Consumes: `deployColorKey`, `envStateLabel`, `deployRef`, `timeAgo` fra `statusFormat.js`; `service.deploy = {state, environments[]}` fra `status.json`.
-- Produces: kort med topp-prikk = `deployColorKey(deploy.state)` og én rad per miljø (rekkefølge kommer ferdig sortert fra `buildDeploy`).
+- Consumes: `deployColorKey`, `combineSeverity`, `envStateLabel`, `deployRef`, `formatMs`, `formatPct`, `timeAgo` fra `statusFormat.js`; `service.deploy = {state, environments[]}` og `service.health = {state, p95Ms, errorRate5xx, errorRate4xx}` fra `status.json`.
+- Produces: kort med topp-prikk = `combineSeverity(deploy.state, health.state)`, én rad per miljø (ferdig sortert fra `buildDeploy`), og fase 2 sin metrikk-linje beholdt.
 
 - [ ] **Step 1: Write the failing test**
 
 ```jsx
 // src/components/ServiceCard.test.jsx (erstatt hele filen)
+// Behold fase 2 sine helse-linje-tester; legg til per-miljø-tester. Deploy-objektet
+// har nå formen { state, environments[] }.
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ServiceCard from './ServiceCard.jsx';
 
 const now = new Date('2026-07-24T10:00:00Z');
-const base = { name: 'products-api', repo: 'entur/products-api', health: { state: 'unknown', errorRate: null, p95Ms: null } };
 
 const deploy = {
     state: 'success',
@@ -622,10 +626,12 @@ const deploy = {
         { env: 'dev', state: 'success', sha: '6edc092', at: '2026-07-24T08:00:00Z', ticket: null, pr: 432, url: 'https://x/dev' }
     ]
 };
+const unknownHealth = { state: 'unknown', up: null, p95Ms: null, errorRate5xx: null, errorRate4xx: null };
+const upHealth = { state: 'up', up: true, p95Ms: 142, errorRate5xx: 0.002, errorRate4xx: 0.011 };
 
 describe('ServiceCard', () => {
     it('viser tjenestenavn og en rad per miljø', () => {
-        render(<ServiceCard now={now} service={{ ...base, deploy }} />);
+        render(<ServiceCard now={now} service={{ name: 'products-api', repo: 'entur/products-api', deploy, health: unknownHealth }} />);
         expect(screen.getByText('products-api')).toBeInTheDocument();
         expect(screen.getByText('PRD')).toBeInTheDocument();
         expect(screen.getByText('TST')).toBeInTheDocument();
@@ -635,13 +641,13 @@ describe('ServiceCard', () => {
     });
 
     it('viser ETU-nummer for prd og PR-fallback for dev', () => {
-        render(<ServiceCard now={now} service={{ ...base, deploy }} />);
+        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
         expect(screen.getByText('ETU-73549')).toBeInTheDocument();
         expect(screen.getAllByText('PR: 432').length).toBeGreaterThanOrEqual(1);
     });
 
     it('viser statustekst for in_progress', () => {
-        render(<ServiceCard now={now} service={{ ...base, deploy }} />);
+        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
         expect(screen.getByText('deployer …')).toBeInTheDocument();
     });
 
@@ -654,8 +660,20 @@ describe('ServiceCard', () => {
                 { env: 'dev', state: 'unknown', sha: null, at: null, ticket: null, pr: null, url: 'https://x' }
             ]
         };
-        render(<ServiceCard now={now} service={{ ...base, deploy: unknownDeploy }} />);
+        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: unknownDeploy, health: unknownHealth }} />);
         expect(screen.getAllByText('ingen data')).toHaveLength(3);
+    });
+
+    it('skjuler metrikk-linja når helse er unknown', () => {
+        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
+        expect(screen.queryByText(/p95/)).not.toBeInTheDocument();
+    });
+
+    it('viser metrikk-linja med p95, 5xx og 4xx når helse finnes', () => {
+        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: upHealth }} />);
+        expect(screen.getByText(/p95 142 ms/)).toBeInTheDocument();
+        expect(screen.getByText(/5xx 0,2 %/)).toBeInTheDocument();
+        expect(screen.getByText(/4xx 1,1 %/)).toBeInTheDocument();
     });
 });
 ```
@@ -663,7 +681,7 @@ describe('ServiceCard', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `yarn test src/components/ServiceCard.test.jsx`
-Expected: FAIL (gammel `ServiceCard` viser `deployLabel`/`deploy.sha`, ikke miljø-rader).
+Expected: FAIL (gammel `ServiceCard` viser enkelt `deployLabel`/`deploy.sha`, ikke miljø-rader — `PRD`/`965bd60` finnes ikke).
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -672,7 +690,7 @@ Expected: FAIL (gammel `ServiceCard` viser `deployLabel`/`deploy.sha`, ikke milj
 import React from 'react';
 import { Heading, Text } from '@entur/typography/beta';
 import { semantic } from '@entur/tokens';
-import { deployColorKey, envStateLabel, deployRef, timeAgo } from '../lib/statusFormat.js';
+import { deployColorKey, combineSeverity, envStateLabel, deployRef, formatMs, formatPct, timeAgo } from '../lib/statusFormat.js';
 
 const DOT = {
     success: semantic.fill.success.default,
@@ -698,7 +716,9 @@ function EnvRow({ env, now }) {
 }
 
 export default function ServiceCard({ service, now = new Date() }) {
-    const { deploy } = service;
+    const { deploy, health } = service;
+    const colorKey = combineSeverity(deploy.state, health.state);
+    const showMetrics = health.state !== 'unknown';
     return (
         <div style={{
             background: 'white', borderRadius: 12, padding: '20px 24px',
@@ -706,10 +726,15 @@ export default function ServiceCard({ service, now = new Date() }) {
             flexDirection: 'column', gap: 10, minHeight: 0
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 16, height: 16, borderRadius: '50%', background: DOT[deployColorKey(deploy.state)], flex: '0 0 auto' }} />
+                <span style={{ width: 16, height: 16, borderRadius: '50%', background: DOT[colorKey], flex: '0 0 auto' }} />
                 <Heading as="h3" variant="subtitle-1" margin="none">{service.name}</Heading>
             </div>
             {deploy.environments.map((env) => <EnvRow key={env.env} env={env} now={now} />)}
+            {showMetrics && (
+                <Text variant="caption" margin="none">
+                    {`p95 ${formatMs(health.p95Ms)} · 5xx ${formatPct(health.errorRate5xx)} · 4xx ${formatPct(health.errorRate4xx)}`}
+                </Text>
+            )}
         </div>
     );
 }
