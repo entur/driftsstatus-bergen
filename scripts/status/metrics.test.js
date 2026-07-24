@@ -25,11 +25,15 @@ describe('buildQueries', () => {
         expect(q2.total).toBe('sum(rate(http_requests_total{namespace="products"}[15m]))');
         expect(q2.p95).toContain('http_latency_bucket');
     });
-    it('bruker upSelector for up-queryen når satt', () => {
-        const q = buildQueries({ ...svc, upSelector: { namespace: 'products' } });
+    it('bruker upSelector for up-queryen (dropper app-label som up-metrikken mangler)', () => {
+        const q = buildQueries({
+            metricsSelector: { namespace: 'products', service: 'products-api' },
+            upSelector: { namespace: 'products' }
+        });
+        // up bruker upSelector — uten service-labelen:
         expect(q.up).toBe('sum(up{namespace="products"})');
-        // øvrige queries bruker fortsatt full metricsSelector:
-        expect(q.total).toBe('sum(rate(http_server_requests_seconds_count{namespace="products"}[15m]))');
+        // øvrige queries beholder full metricsSelector (med service):
+        expect(q.total).toBe('sum(rate(http_server_requests_seconds_count{namespace="products",service="products-api"}[15m]))');
     });
 });
 
