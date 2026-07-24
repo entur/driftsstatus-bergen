@@ -519,15 +519,15 @@ git commit -m "refactor: buildStatusJson bruker deploy-status per miljø"
 - Produces:
   - `envStateLabel(state): string` — `'deployer …' | 'feilet' | 'ingen data' | ''` (`''` for `success`)
   - `deployRef(env: {ticket, pr}): string` — `ticket` ellers `'PR: <pr>'` ellers `''`
-- Fjerner: `deployLabel` (ikke lenger brukt etter Task 5).
+- Behold `deployLabel` uendret (fjernes ikke — unngår brutt import i `ServiceCard.jsx` før Task 5, og reduserer kollisjon med fase 2).
 
 - [ ] **Step 1: Write the failing test**
 
 ```js
-// i src/lib/statusFormat.test.js: oppdater import-linjen og bytt ut deployLabel-blokka
+// i src/lib/statusFormat.test.js: utvid import-linjen og legg til nye describe-blokker.
 // Import-linjen skal være:
-//   import { isStale, deployColorKey, timeAgo, envStateLabel, deployRef } from './statusFormat.js';
-// Slett describe('deployLabel', ...) helt, og legg til:
+//   import { isStale, deployLabel, deployColorKey, timeAgo, envStateLabel, deployRef } from './statusFormat.js';
+// Behold eksisterende describe-blokker uendret; legg til:
 
 describe('envStateLabel', () => {
     it('gir norsk tekst for ikke-success states', () => {
@@ -556,11 +556,11 @@ describe('deployRef', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `yarn test src/lib/statusFormat.test.js`
-Expected: FAIL med "envStateLabel is not a function" (og import-feil for fjernet `deployLabel`).
+Expected: FAIL med "envStateLabel is not a function".
 
 - [ ] **Step 3: Write minimal implementation**
 
-I `src/lib/statusFormat.js`: slett `LABELS`-objektet og `deployLabel`-funksjonen (linjene 8–16), behold `deployColorKey`, og legg til nederst:
+I `src/lib/statusFormat.js`: behold alt eksisterende (inkl. `deployLabel`), og legg til nederst:
 
 ```js
 const ENV_STATE_LABELS = {
