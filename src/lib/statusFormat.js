@@ -29,3 +29,30 @@ export function timeAgo(iso, now) {
     if (!iso) return '';
     return formatDistance(new Date(iso), now, { addSuffix: true, locale: nb });
 }
+
+const HEALTH_COLORS = {
+    up: 'success',
+    degraded: 'warning',
+    down: 'negative',
+    unknown: 'neutral'
+};
+export function healthColorKey(state) {
+    return HEALTH_COLORS[state] ?? 'neutral';
+}
+
+const RANK = { neutral: 0, success: 1, warning: 2, negative: 3 };
+const BY_RANK = ['neutral', 'success', 'warning', 'negative'];
+export function combineSeverity(deployState, healthState) {
+    const r = Math.max(RANK[deployColorKey(deployState)], RANK[healthColorKey(healthState)]);
+    return BY_RANK[r];
+}
+
+export function formatMs(n) {
+    if (n === null || n === undefined) return '–';
+    return `${Math.round(n)} ms`;
+}
+
+export function formatPct(frac) {
+    if (frac === null || frac === undefined) return '–';
+    return `${(frac * 100).toFixed(1).replace('.', ',')} %`;
+}

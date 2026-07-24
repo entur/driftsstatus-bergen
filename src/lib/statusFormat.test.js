@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStale, deployLabel, deployColorKey, timeAgo } from './statusFormat.js';
+import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct } from './statusFormat.js';
 
 describe('isStale', () => {
     const now = new Date('2026-07-24T10:00:00Z');
@@ -36,5 +36,48 @@ describe('timeAgo', () => {
     });
     it('gir tom streng for null', () => {
         expect(timeAgo(null, new Date())).toBe('');
+    });
+});
+
+describe('healthColorKey', () => {
+    it('mapper helse-state til fargenøkkel', () => {
+        expect(healthColorKey('up')).toBe('success');
+        expect(healthColorKey('degraded')).toBe('warning');
+        expect(healthColorKey('down')).toBe('negative');
+        expect(healthColorKey('unknown')).toBe('neutral');
+    });
+});
+
+describe('combineSeverity', () => {
+    it('tar verste av deploy og helse', () => {
+        expect(combineSeverity('success', 'up')).toBe('success');
+        expect(combineSeverity('success', 'degraded')).toBe('warning');
+        expect(combineSeverity('success', 'down')).toBe('negative');
+        expect(combineSeverity('failure', 'up')).toBe('negative');
+        expect(combineSeverity('in_progress', 'up')).toBe('warning');
+    });
+    it('lar helse løfte ukjent deploy, og motsatt', () => {
+        expect(combineSeverity('unknown', 'up')).toBe('success');
+        expect(combineSeverity('success', 'unknown')).toBe('success');
+        expect(combineSeverity('unknown', 'unknown')).toBe('neutral');
+    });
+});
+
+describe('formatMs', () => {
+    it('avrunder og legger på ms', () => {
+        expect(formatMs(142.7)).toBe('143 ms');
+    });
+    it('null gir tankestrek', () => {
+        expect(formatMs(null)).toBe('–');
+    });
+});
+
+describe('formatPct', () => {
+    it('formatterer brøk som prosent med komma', () => {
+        expect(formatPct(0.002)).toBe('0,2 %');
+        expect(formatPct(0.011)).toBe('1,1 %');
+    });
+    it('null gir tankestrek', () => {
+        expect(formatPct(null)).toBe('–');
     });
 });
