@@ -27,3 +27,10 @@ export function parseStatusFeed(json) {
     }
     return { messages, overall: utledOverall(messages) };
 }
+
+export async function fetchStatusFeed(url, fetchImpl = fetch) {
+    const res = await fetchImpl(url);
+    if (!res.ok) throw new Error(`summary.json ${res.status}`);
+    const data = await res.json();
+    return parseStatusFeed(data);
+}

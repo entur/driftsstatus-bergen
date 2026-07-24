@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseStatusFeed, utledOverall } from './statusFeed.js';
+import { parseStatusFeed, utledOverall, fetchStatusFeed } from './statusFeed.js';
 
 describe('utledOverall', () => {
     it('gir green for tom liste', () => {
@@ -56,5 +56,24 @@ describe('parseStatusFeed', () => {
     it('er fail-safe for tomt/ugyldig objekt', () => {
         expect(parseStatusFeed(null)).toEqual({ messages: [], overall: 'green' });
         expect(parseStatusFeed({})).toEqual({ messages: [], overall: 'green' });
+    });
+});
+
+describe('fetchStatusFeed', () => {
+    it('henter og parser summary.json', async () => {
+        const fakeFetch = async () => ({
+            ok: true,
+            json: async () => ({
+                incidents: [{ name: 'Feil', status: 'investigating' }],
+                scheduled_maintenances: [],
+            }),
+        });
+        const r = await fetchStatusFeed('/x', fakeFetch);
+        expect(r.overall).toBe('red');
+        expect(r.messages).toHaveLength(1);
+    });
+    it('kaster ved ikke-ok respons', async () => {
+        const fakeFetch = async () => ({ ok: false, status: 503 });
+        await expect(fetchStatusFeed('/x', fakeFetch)).rejects.toThrow();
     });
 });
