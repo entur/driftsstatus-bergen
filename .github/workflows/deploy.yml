@@ -51,6 +51,7 @@ jobs:
           STATUS_OUTPUT: public/status.json
         run: |
           export GCP_TOKEN="$(gcloud auth print-access-token)"
+          echo "::add-mask::$GCP_TOKEN"
           node scripts/collect-status.mjs
 
       - name: Build

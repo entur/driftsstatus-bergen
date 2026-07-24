@@ -15,10 +15,11 @@ function selectorString(labels) {
 
 export function buildQueries(service) {
     const sel = selectorString(service.metricsSelector);
+    const upSel = selectorString(service.upSelector || service.metricsSelector);
     const count = service.requestCountMetric || 'http_server_requests_seconds_count';
     const bucket = service.latencyBucketMetric || 'http_server_requests_seconds_bucket';
     return {
-        up: `sum(up{${sel}})`,
+        up: `sum(up{${upSel}})`,
         p95: `histogram_quantile(0.95, sum by (le) (rate(${bucket}{${sel}}[15m]))) * 1000`,
         fivexx: `sum(rate(${count}{${sel},status=~"5.."}[15m]))`,
         fourxx: `sum(rate(${count}{${sel},status=~"4.."}[15m]))`,
