@@ -37,6 +37,12 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Collect status into public/
+        env:
+          GH_TOKEN: ${{ secrets.STATUS_GH_TOKEN }}
+          STATUS_OUTPUT: public/status.json
+        run: node scripts/collect-status.mjs
+
       - name: Build
         run: yarn build
 
