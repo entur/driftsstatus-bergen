@@ -6,6 +6,8 @@
 
 **Architecture:** Collectoren henter per miljø nyeste deployment som faktisk deployer/har deployet (hopper over `waiting`/avventer-godkjenning), normaliserer status, og trekker ETU-/PR-referanse ut av commit-tittelen. Resultatet skrives til `status.json` som `deploy.environments[]` med headline `deploy.state` = prd. `ServiceCard` viser én rad per miljø (PRD → TST → DEV).
 
+**Integrasjon med fase 2:** Dette increment bygges oppå fase 2-branchen. Fase 2 har allerede landet `buildStatusJson(services, fetchRuns, fetchHealth, generatedAt)`, `scripts/status/metrics.js` og helse-wiring i `collect-status.mjs`. Vi **bytter bare deploy-kilden** (fetchRuns → Deployments API) og **beholder helse-innhentingen uendret**. `statusFormat.js` og `ServiceCard.jsx` er ennå ikke rørt av fase 2, så frontend-tasksene (4–5) står som opprinnelig. Fase 2 sine gjenstående frontend-tasks (helse-farge + metrikk-linje) legges senere oppå den per-miljø-kortet dette increment lager.
+
 **Tech Stack:** Node ESM, vitest, React 19, `@entur/typography` + `@entur/tokens`, `date-fns` (nb-locale). Ingen nye avhengigheter.
 
 ## Global Constraints
@@ -383,8 +385,9 @@ git commit -m "feat: fetchDeployEnvironments henter deploy per miljø via injise
 - Delete: `scripts/status/deploy.js`, `scripts/status/deploy.test.js`
 
 **Interfaces:**
-- Consumes: `fetchDeployEnvironments(service, fetchers)` fra Task 2.
-- Produces: `buildStatusJson(services, deployFetchers, generatedAt): Promise<{generatedAt, services[]}>` der hver service er `{ name, repo, deploy: {state, environments}, health }`.
+- Consumes: `fetchDeployEnvironments(service, fetchers)` fra Task 2; `UNKNOWN_HEALTH` fra `metrics.js` (fase 2, allerede landet).
+- Produces: `buildStatusJson(services, deployFetchers, fetchHealth, generatedAt): Promise<{generatedAt, services[]}>` der hver service er `{ name, repo, deploy: {state, environments}, health }`.
+- **Integrasjon:** signaturen beholder fase 2 sin `fetchHealth`-parameter og helse-innhenting uendret; vi bytter kun deploy-delen fra `fetchRuns`/`selectDeployRun` til `fetchDeployEnvironments`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -398,7 +401,7 @@ const services = [
     { name: 'svc-b', repo: 'entur/svc-b', environments: ['dev', 'tst', 'prd'] }
 ];
 
-const fetchers = {
+const deployFetchers = {
     listDeployments: async (repo) => repo === 'entur/svc-a'
         ? [{ id: 1, sha: 'abcdef1234', created_at: '2026-07-24T08:00:00Z' }]
         : [],
@@ -406,9 +409,11 @@ const fetchers = {
     getCommitMessage: async () => 'feat: noe (ETU-1) (#9)'
 };
 
+const fetchHealthOk = async () => ({ state: 'up', up: true, p95Ms: 100, errorRate5xx: 0, errorRate4xx: 0 });
+
 describe('buildStatusJson', () => {
-    it('bygger per-miljø-deploy for alle tjenester', async () => {
-        const result = await buildStatusJson(services, fetchers, '2026-07-24T09:00:00Z');
+    it('bygger per-miljø-deploy og beholder helse for alle tjenester', async () => {
+        const result = await buildStatusJson(services, deployFetchers, fetchHealthOk, '2026-07-24T09:00:00Z');
         expect(result.generatedAt).toBe('2026-07-24T09:00:00Z');
         expect(result.services).toHaveLength(2);
 
@@ -417,17 +422,23 @@ describe('buildStatusJson', () => {
         expect(a.deploy.state).toBe('success');
         expect(a.deploy.environments.map((e) => e.env)).toEqual(['prd', 'tst', 'dev']);
         expect(a.deploy.environments[0]).toMatchObject({ env: 'prd', state: 'success', sha: 'abcdef1', ticket: 'ETU-1', pr: 9 });
-        expect(a.health).toEqual({ state: 'unknown', errorRate: null, p95Ms: null });
+        expect(a.health).toEqual({ state: 'up', up: true, p95Ms: 100, errorRate5xx: 0, errorRate4xx: 0 });
     });
 
     it('gir unknown-deploy for tjeneste uten deployments', async () => {
-        const result = await buildStatusJson(services, fetchers, '2026-07-24T09:00:00Z');
+        const result = await buildStatusJson(services, deployFetchers, fetchHealthOk, '2026-07-24T09:00:00Z');
         const b = result.services[1];
         expect(b.deploy.state).toBe('unknown');
         expect(b.deploy.environments.every((e) => e.state === 'unknown')).toBe(true);
     });
 
-    it('lar en feilende fetch for én tjeneste gi unknown uten å velte resten', async () => {
+    it('gir unknown-helse når fetchHealth kaster', async () => {
+        const failingHealth = async () => { throw new Error('boom'); };
+        const result = await buildStatusJson(services, deployFetchers, failingHealth, '2026-07-24T09:00:00Z');
+        expect(result.services[0].health.state).toBe('unknown');
+    });
+
+    it('lar en feilende deploy-fetch for én tjeneste gi unknown uten å velte resten', async () => {
         const failing = {
             listDeployments: async (repo) => {
                 if (repo === 'entur/svc-b') throw new Error('boom');
@@ -436,7 +447,7 @@ describe('buildStatusJson', () => {
             getStatus: async () => ({ state: 'success', at: '2026-07-24T08:05:00Z', url: 'https://x/log' }),
             getCommitMessage: async () => 'feat: noe (ETU-1) (#9)'
         };
-        const result = await buildStatusJson(services, failing, '2026-07-24T09:00:00Z');
+        const result = await buildStatusJson(services, failing, fetchHealthOk, '2026-07-24T09:00:00Z');
         expect(result.services[0].deploy.state).toBe('success');
         expect(result.services[1].deploy.state).toBe('unknown');
     });
@@ -446,17 +457,16 @@ describe('buildStatusJson', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `yarn test scripts/status/buildStatus.test.js`
-Expected: FAIL (gammel `buildStatusJson` bruker `fetchRuns`/`selectDeployRun`, gir feil form).
+Expected: FAIL (gammel `buildStatusJson` bruker `fetchRuns`/`selectDeployRun` for deploy, gir feil form på `deploy`).
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```js
 // scripts/status/buildStatus.js (erstatt hele filen)
 import { fetchDeployEnvironments } from './deployEnvironments.js';
+import { UNKNOWN_HEALTH } from './metrics.js';
 
-const UNKNOWN_HEALTH = { state: 'unknown', errorRate: null, p95Ms: null };
-
-export async function buildStatusJson(services, deployFetchers, generatedAt) {
+export async function buildStatusJson(services, deployFetchers, fetchHealth, generatedAt) {
     const results = await Promise.all(
         services.map(async (svc) => {
             let deploy;
@@ -465,7 +475,13 @@ export async function buildStatusJson(services, deployFetchers, generatedAt) {
             } catch {
                 deploy = { state: 'unknown', environments: [] };
             }
-            return { name: svc.name, repo: svc.repo, deploy, health: { ...UNKNOWN_HEALTH } };
+            let health;
+            try {
+                health = await fetchHealth(svc);
+            } catch {
+                health = { ...UNKNOWN_HEALTH };
+            }
+            return { name: svc.name, repo: svc.repo, deploy, health };
         })
     );
     return { generatedAt, services: results };
@@ -723,36 +739,47 @@ git commit -m "feat: ServiceCard viser deploy per miljø (prd/tst/dev)"
 - Consumes: `buildStatusJson(services, deployFetchers, generatedAt)` fra Task 3; `SERVICES` fra `services.js`.
 - Produces: kjørbar collector som skriver `status.json` med per-miljø-deploy.
 
-- [ ] **Step 1: Oppdater `services.js`**
+- [ ] **Step 1: Oppdater `services.js`** (behold fase 2 sine metrics-felt, legg til `environments`, fjern `deployWorkflowNames`/`branch`)
 
 ```js
 // scripts/status/services.js (erstatt hele filen)
 export const SERVICES = [
-    { name: 'products-api', repo: 'entur/products-api', environments: ['dev', 'tst', 'prd'] },
-    { name: 'products-spring', repo: 'entur/products-spring', environments: ['dev', 'tst', 'prd'] },
-    { name: 'distribution-channels-api', repo: 'entur/distribution-channels-api', environments: ['dev', 'tst', 'prd'] }
+    {
+        name: 'products-api', repo: 'entur/products-api', environments: ['dev', 'tst', 'prd'],
+        metricsProject: 'ent-products-prd', metricsSelector: { namespace: 'products', service: 'products-api' }
+    },
+    {
+        name: 'products-spring', repo: 'entur/products-spring', environments: ['dev', 'tst', 'prd'],
+        metricsProject: 'ent-products-prd', metricsSelector: { namespace: 'products', service: 'products-spring' }
+    },
+    {
+        name: 'distribution-channels-api', repo: 'entur/distribution-channels-api', environments: ['dev', 'tst', 'prd'],
+        metricsProject: 'ent-distchapi-prd', metricsSelector: { namespace: 'distribution-channels-api' }
+    }
 ];
 ```
 
-- [ ] **Step 2: Oppdater `collect-status.mjs` til ekte Deployments-fetchers**
+- [ ] **Step 2: Oppdater `collect-status.mjs`** (behold GCP/helse-wiring, bytt `fetchRuns` → `deployFetchers`)
 
 ```js
 // scripts/collect-status.mjs (erstatt hele filen)
 import { writeFile } from 'node:fs/promises';
 import { SERVICES } from './status/services.js';
 import { buildStatusJson } from './status/buildStatus.js';
+import { fetchMetrics, UNKNOWN_HEALTH } from './status/metrics.js';
 
 const GH_API = 'https://api.github.com';
 const token = process.env.GH_TOKEN;
+const gcpToken = process.env.GCP_TOKEN;
 
-const headers = {
+const ghHeaders = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
 };
 
 async function ghJson(path) {
-    const res = await fetch(`${GH_API}${path}`, { headers });
+    const res = await fetch(`${GH_API}${path}`, { headers: ghHeaders });
     if (!res.ok) throw new Error(`GitHub API ${res.status} for ${path}`);
     return res.json();
 }
@@ -773,12 +800,28 @@ const deployFetchers = {
     }
 };
 
+async function queryPrometheus(project, promql) {
+    const url = `https://monitoring.googleapis.com/v1/projects/${project}/location/global/prometheus/api/v1/query`;
+    const res = await fetch(`${url}?query=${encodeURIComponent(promql)}`, {
+        headers: { Authorization: `Bearer ${gcpToken}` }
+    });
+    if (!res.ok) throw new Error(`GMP ${res.status} for ${project}`);
+    return res.json();
+}
+
 async function main() {
     if (!token) {
         console.warn('GH_TOKEN mangler — deploy-status blir "unknown" for alle tjenester.');
     }
+    const fetchHealth = gcpToken
+        ? (svc) => fetchMetrics(svc, queryPrometheus)
+        : async () => ({ ...UNKNOWN_HEALTH });
+    if (!gcpToken) {
+        console.warn('GCP_TOKEN mangler — helse blir "unknown" for alle tjenester.');
+    }
+
     const outputPath = process.env.STATUS_OUTPUT || 'status.json';
-    const status = await buildStatusJson(SERVICES, deployFetchers, new Date().toISOString());
+    const status = await buildStatusJson(SERVICES, deployFetchers, fetchHealth, new Date().toISOString());
     await writeFile(outputPath, JSON.stringify(status, null, 2));
     console.log(`Skrev ${outputPath} med ${status.services.length} tjenester.`);
 }
