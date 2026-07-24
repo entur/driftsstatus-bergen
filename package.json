@@ -24,7 +24,7 @@
 		"@entur/typography": "^2.1.1",
 		"@tailwindcss/vite": "^4.1.18",
 		"date-fns": "^4.1.0",
-		"pnpm": "^10.28.0",
+		"pnpm": "^11.17.0",
 		"react": "^19.2.3",
 		"react-dom": "^19.2.3"
 	}

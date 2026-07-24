@@ -4192,10 +4192,10 @@ pkce-challenge@^5.0.0:
   resolved "https://registry.yarnpkg.com/pkce-challenge/-/pkce-challenge-5.0.1.tgz#3b4446865b17b1745e9ace2016a31f48ddf6230d"
   integrity sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==
 
-pnpm@^10.28.0:
-  version "10.34.5"
-  resolved "https://registry.yarnpkg.com/pnpm/-/pnpm-10.34.5.tgz#6a91127a7f2ca72fe53bb9ff54883e0c75b22f17"
-  integrity sha512-pO4F8vc2WCVb1qiYWcBlpFwopX2u+uLIk6Fo7itzFow3uR6D5X6mdlStA/AwMXRkMOi84442LgQmBfuKvIAZLg==
+pnpm@^11.17.0:
+  version "11.17.0"
+  resolved "https://registry.yarnpkg.com/pnpm/-/pnpm-11.17.0.tgz#fc1294348ce0f22a29133abd662561bfac01c448"
+  integrity sha512-zKPOozKtJUu4QUX5ZtGfSHlhUhA0b8kseaBH8joNezzKPDeS8AdrofGDHSd++88KkRmzGppg7Kf7PWIx8zHvcg==
 
 portfinder@^1.0.32:
   version "1.0.38"
