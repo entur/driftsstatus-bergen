@@ -37,15 +37,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Collect status into public/
-        env:
-          GH_TOKEN: ${{ secrets.STATUS_GH_TOKEN }}
-          STATUS_OUTPUT: public/status.json
-        run: node scripts/collect-status.mjs
-
-      - name: Build
-        run: yarn build
-
       - name: Authenticate to Google Cloud (keyless)
         uses: entur/gha-meta/.github/actions/cloud-auth@v1
         with:
@@ -53,6 +44,17 @@ jobs:
           cloud_provider: gcp
           gcp_workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
           gcp_service_account: ${{ vars.SERVICE_ACCOUNT }}
+
+      - name: Collect status into public/
+        env:
+          GH_TOKEN: ${{ secrets.STATUS_GH_TOKEN }}
+          STATUS_OUTPUT: public/status.json
+        run: |
+          export GCP_TOKEN="$(gcloud auth print-access-token)"
+          node scripts/collect-status.mjs
+
+      - name: Build
+        run: yarn build
 
       - name: Deploy to Firebase Hosting
         run: yarn firebase deploy --only hosting --project ent-statusber-prd --non-interactive
