@@ -1,16 +1,14 @@
-import { selectDeployRun, buildDeploy } from './deploy.js';
+import { fetchDeployEnvironments } from './deployEnvironments.js';
 import { UNKNOWN_HEALTH } from './metrics.js';
 
-export async function buildStatusJson(services, fetchRuns, fetchHealth, generatedAt) {
+export async function buildStatusJson(services, deployFetchers, fetchHealth, generatedAt) {
     const results = await Promise.all(
         services.map(async (svc) => {
             let deploy;
             try {
-                const runs = await fetchRuns(svc.repo, svc.branch);
-                const run = selectDeployRun(runs, svc.deployWorkflowNames);
-                deploy = buildDeploy(run, svc.repo);
+                deploy = await fetchDeployEnvironments(svc, deployFetchers);
             } catch {
-                deploy = buildDeploy(null, svc.repo);
+                deploy = { state: 'unknown', environments: [] };
             }
             let health;
             try {
