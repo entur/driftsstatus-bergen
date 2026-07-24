@@ -25,7 +25,8 @@ async function fetchRuns(repo, branch) {
 async function queryPrometheus(project, promql) {
     const url = `https://monitoring.googleapis.com/v1/projects/${project}/location/global/prometheus/api/v1/query`;
     const res = await fetch(`${url}?query=${encodeURIComponent(promql)}`, {
-        headers: { Authorization: `Bearer ${gcpToken}` }
+        headers: { Authorization: `Bearer ${gcpToken}` },
+        signal: AbortSignal.timeout(10000)
     });
     if (!res.ok) throw new Error(`GMP ${res.status} for ${project}`);
     return res.json();

@@ -25,6 +25,12 @@ describe('buildQueries', () => {
         expect(q2.total).toBe('sum(rate(http_requests_total{namespace="products"}[15m]))');
         expect(q2.p95).toContain('http_latency_bucket');
     });
+    it('bruker upSelector for up-queryen når satt', () => {
+        const q = buildQueries({ ...svc, upSelector: { namespace: 'products' } });
+        expect(q.up).toBe('sum(up{namespace="products"})');
+        // øvrige queries bruker fortsatt full metricsSelector:
+        expect(q.total).toBe('sum(rate(http_server_requests_seconds_count{namespace="products"}[15m]))');
+    });
 });
 
 describe('parseInstantVector', () => {
