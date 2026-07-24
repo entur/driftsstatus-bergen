@@ -1,7 +1,7 @@
 import React from 'react';
 
 const COLORS = {
-    green: { bg: '#2d8a4e', fg: '#ffffff' },
+    green: { bg: '#24713f', fg: '#ffffff' },
     yellow: { bg: '#f5c542', fg: '#1a1a1a' },
     red: { bg: '#c4271e', fg: '#ffffff' },
 };
