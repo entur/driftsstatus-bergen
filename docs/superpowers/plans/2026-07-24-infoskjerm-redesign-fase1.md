@@ -698,7 +698,7 @@ Expected: FAIL — alle tre importene lar seg ikke resolve.
 
 Opprett `src/lib/statusFormat.js`:
 ```js
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistance } from 'date-fns';
 import { nb } from 'date-fns/locale';
 
 export function isStale(generatedAt, now, maxAgeMs = 15 * 60 * 1000) {
@@ -727,11 +727,9 @@ export function deployColorKey(state) {
 
 export function timeAgo(iso, now) {
     if (!iso) return '';
-    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: nb });
+    return formatDistance(new Date(iso), now, { addSuffix: true, locale: nb });
 }
 ```
-
-Merk: `now`-argumentet holder signaturen deterministisk for testene; `formatDistanceToNow` bruker systemtid, som i test er nær nok for `/time/`-matchen.
 
 - [ ] **Step 6: Implementer parseRssTitles.js**
 
