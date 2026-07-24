@@ -1,4 +1,3 @@
-// src/components/ServiceCard.test.jsx (erstatt hele filen)
 // Behold fase 2 sine helse-linje-tester; legg til per-miljø-tester. Deploy-objektet
 // har nå formen { state, environments[] }.
 import { describe, it, expect } from 'vitest';

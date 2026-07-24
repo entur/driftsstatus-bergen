@@ -1,4 +1,3 @@
-// scripts/collect-status.mjs (erstatt hele filen)
 import { writeFile } from 'node:fs/promises';
 import { SERVICES } from './status/services.js';
 import { buildStatusJson } from './status/buildStatus.js';

@@ -1,4 +1,3 @@
-// scripts/status/services.js (erstatt hele filen)
 export const SERVICES = [
     {
         name: 'products-api', repo: 'entur/products-api', environments: ['dev', 'tst', 'prd'],
