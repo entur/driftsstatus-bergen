@@ -29,7 +29,7 @@ export function extractPr(message) {
 
 export function buildDeployEnvironment({ env, sha, at, statusState, commitMessage, url, repo }) {
     if (!sha) {
-        return { env, state: 'unknown', sha: null, at: null, ticket: null, pr: null, url: `https://github.com/${repo}/deployments` };
+        return { env, state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: `https://github.com/${repo}/deployments` };
     }
     return {
         env,
@@ -38,6 +38,7 @@ export function buildDeployEnvironment({ env, sha, at, statusState, commitMessag
         at: at ?? null,
         ticket: extractTicket(commitMessage),
         pr: extractPr(commitMessage),
+        commitMessage: firstLine(commitMessage).trim() || null,
         url: url || `https://github.com/${repo}/deployments`
     };
 }

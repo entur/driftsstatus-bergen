@@ -94,10 +94,23 @@ describe('buildDeployEnvironment', () => {
             at: '2026-06-15T10:21:07Z',
             ticket: 'ETU-73549',
             pr: 411,
+            commitMessage: 'chore: Bump (ETU-73549) (#411)',
             url: 'https://x/log'
         });
     });
-    it('gir unknown-objekt når sha mangler', () => {
+    it('bruker kun første linje av commit-meldingen, trimmet', () => {
+        const env = buildDeployEnvironment({
+            env: 'prd',
+            sha: 'abcdef012345',
+            at: '2026-06-15T10:21:07Z',
+            statusState: 'success',
+            commitMessage: '  feat: legg til X  \n\nlengre body-tekst her',
+            url: 'https://x/log',
+            repo: 'entur/products-api'
+        });
+        expect(env.commitMessage).toBe('feat: legg til X');
+    });
+    it('gir unknown-objekt med commitMessage null når sha mangler', () => {
         const env = buildDeployEnvironment({ env: 'tst', sha: null, repo: 'entur/products-api' });
         expect(env).toEqual({
             env: 'tst',
@@ -106,6 +119,7 @@ describe('buildDeployEnvironment', () => {
             at: null,
             ticket: null,
             pr: null,
+            commitMessage: null,
             url: 'https://github.com/entur/products-api/deployments'
         });
     });
