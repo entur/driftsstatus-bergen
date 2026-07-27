@@ -1,20 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Heading } from '@entur/typography/beta';
 import { Contrast } from '@entur/layout';
 import { semantic } from '@entur/tokens';
 import ServiceHealthGrid from './components/ServiceHealthGrid.jsx';
 import StatusTicker from './components/StatusTicker.jsx';
 import { fetchStatus } from './lib/fetchStatus.js';
-import { parseRssTitles } from './lib/parseRssTitles.js';
+import { fetchStatusFeed } from './lib/statusFeed.js';
 
 const STATUS_URL = import.meta.env.VITE_STATUS_URL || '/status.json';
-const RSS_URL = 'https://status.entur.org/history.rss';
+const STATUSPAGE_URL = 'https://status.entur.org/api/v2/summary.json';
 const REFRESH_MS = 5 * 60 * 1000;
 
 function App() {
     const [status, setStatus] = useState(null);
     const [statusError, setStatusError] = useState(false);
-    const [rssItems, setRssItems] = useState([]);
+    const [feed, setFeed] = useState({ messages: [], overall: 'green' });
 
     useEffect(() => {
         let cancelled = false;
@@ -30,9 +29,8 @@ function App() {
                 // behold forrige visning ved feil
             }
             try {
-                const res = await fetch(RSS_URL);
-                const text = await res.text();
-                if (!cancelled) setRssItems(parseRssTitles(text));
+                const f = await fetchStatusFeed(STATUSPAGE_URL);
+                if (!cancelled) setFeed(f);
             } catch (e) {
                 // behold forrige visning ved feil
             }
@@ -44,10 +42,8 @@ function App() {
 
     return (
         <div style={{ minHeight: '100vh', width: '100vw', height: '100vh', boxSizing: 'border-box', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <Contrast style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: semantic.fill.background.contrast.light, flex: '0 0 auto', padding: '10px 24px' }}>
-                <img src="/logo.svg" alt="Entur" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
-                <Heading as="h1" variant="title-2" margin="none">Driftstatus</Heading>
-                <img src="/sheep.svg" alt="" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
+            <Contrast style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: semantic.fill.background.contrast.light, flex: '0 0 auto', padding: '10px 24px' }}>
+                <img src="/logo.svg" alt="Entur" style={{ height: 64, width: 'auto', objectFit: 'contain' }} />
             </Contrast>
 
             <div style={{ flex: '1 1 0%', minHeight: 0, background: semantic.fill.background.secondary?.default || '#f2f2f2' }}>
@@ -55,7 +51,7 @@ function App() {
             </div>
 
             <div style={{ flex: '0 0 auto' }}>
-                <StatusTicker items={rssItems} />
+                <StatusTicker messages={feed.messages} overall={feed.overall} />
             </div>
         </div>
     );
