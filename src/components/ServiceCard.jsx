@@ -43,7 +43,7 @@ export default function ServiceCard({ service, now = new Date() }) {
             boxShadow: '0 1px 4px rgba(0,0,0,0.12)', display: 'flex',
             flexDirection: 'column', gap: 10, minHeight: 0
         }}>
-            <Heading as="h3" variant="title-2" margin="none">{service.name}</Heading>
+            <Heading as="h3" variant="title-1" margin="none" style={{ fontSize: 30 }}>{service.name}</Heading>
             {deploy.environments.map((env) => <EnvRow key={env.env} env={env} now={now} />)}
             {showMetrics && (
                 <Text variant="caption" margin="none">
