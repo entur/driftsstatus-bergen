@@ -1,5 +1,6 @@
 import { formatDistance } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { semantic } from '@entur/tokens';
 
 export function isStale(generatedAt, now, maxAgeMs = 15 * 60 * 1000) {
     return now.getTime() - new Date(generatedAt).getTime() > maxAgeMs;
@@ -70,4 +71,14 @@ export function deployRef(env) {
     if (env.ticket) return env.ticket;
     if (env.pr) return `PR: ${env.pr}`;
     return '';
+}
+
+const DOT_COLORS = {
+    success: semantic.fill.success.deep,
+    warning: semantic.fill.warning.deep,
+    negative: semantic.fill.negative.deep,
+    neutral: '#9aa0a6'
+};
+export function dotColor(colorKey) {
+    return DOT_COLORS[colorKey] ?? DOT_COLORS.neutral;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef } from './statusFormat.js';
+import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor } from './statusFormat.js';
 
 describe('isStale', () => {
     const now = new Date('2026-07-24T10:00:00Z');
@@ -102,5 +102,22 @@ describe('deployRef', () => {
     });
     it('gir tom streng når begge mangler', () => {
         expect(deployRef({ ticket: null, pr: null })).toBe('');
+    });
+});
+
+describe('dotColor', () => {
+    it('gir definert hex-farge for hver fargenøkkel', () => {
+        for (const key of ['success', 'warning', 'negative', 'neutral']) {
+            expect(dotColor(key)).toMatch(/^#[0-9a-fA-F]{6}$/);
+        }
+    });
+    it('gir riktige deploy-farger fra @entur/tokens', () => {
+        expect(dotColor('success')).toBe('#1a8e60');
+        expect(dotColor('warning')).toBe('#ffca28');
+        expect(dotColor('negative')).toBe('#d31b1b');
+        expect(dotColor('neutral')).toBe('#9aa0a6');
+    });
+    it('faller tilbake til nøytral grå for ukjent nøkkel', () => {
+        expect(dotColor('finnesikke')).toBe('#9aa0a6');
     });
 });
