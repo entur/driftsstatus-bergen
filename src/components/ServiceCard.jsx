@@ -1,9 +1,8 @@
 import React from 'react';
 import { Heading, Text } from '@entur/typography/beta';
-import { dotColor, deployColorKey, combineSeverity, envStateLabel, deployRef, formatMs, formatPct, timeAgo } from '../lib/statusFormat.js';
+import { dotColor, deployColorKey, combineSeverity, envStateLabel, formatMs, formatPct, timeAgo } from '../lib/statusFormat.js';
 
 function EnvRow({ env, now }) {
-    const ref = deployRef(env);
     const secondary = env.state === 'success' ? timeAgo(env.at, now) : envStateLabel(env.state);
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -11,9 +10,25 @@ function EnvRow({ env, now }) {
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: dotColor(deployColorKey(env.state)), flex: '0 0 auto' }} />
                 <Text variant="body" margin="none" style={{ fontWeight: 600, minWidth: 34 }}>{env.env.toUpperCase()}</Text>
                 {env.sha && <Text variant="body" margin="none" style={{ fontFamily: 'monospace' }}>{env.sha}</Text>}
-                {ref && <Text variant="body" margin="none">{ref}</Text>}
             </div>
             {secondary && <Text variant="caption" margin="none" style={{ marginLeft: 18 }}>{secondary}</Text>}
+            {env.commitMessage && (
+                <Text
+                    variant="caption"
+                    margin="none"
+                    data-testid="commit-subject"
+                    style={{
+                        marginLeft: 18,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        opacity: 0.75
+                    }}
+                >
+                    {env.commitMessage}
+                </Text>
+            )}
         </div>
     );
 }
