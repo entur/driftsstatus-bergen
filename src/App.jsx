@@ -8,7 +8,7 @@ import { fetchStatusFeed } from './lib/statusFeed.js';
 
 const STATUS_URL = import.meta.env.VITE_STATUS_URL || '/status.json';
 const STATUSPAGE_URL = 'https://status.entur.org/api/v2/summary.json';
-const REFRESH_MS = 5 * 60 * 1000;
+const REFRESH_MS = 60 * 1000;
 
 function App() {
     const [status, setStatus] = useState(null);
