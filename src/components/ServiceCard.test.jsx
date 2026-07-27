@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ServiceCard from './ServiceCard.jsx';
-import { dotColor } from '../lib/statusFormat.js';
+import { dotColor, cardTint } from '../lib/statusFormat.js';
 
 const now = new Date('2026-07-24T10:00:00Z');
 
@@ -98,5 +98,31 @@ describe('ServiceCard', () => {
         expect(screen.getByText(/p95 142 ms/)).toBeInTheDocument();
         expect(screen.getByText(/5xx 0,2 %/)).toBeInTheDocument();
         expect(screen.getByText(/4xx 1,1 %/)).toBeInTheDocument();
+    });
+
+    it('tinter kort-bakgrunnen etter overall-status', () => {
+        const asRgb = (hex) => {
+            if (hex === 'white') return 'white';
+            const n = parseInt(hex.slice(1), 16);
+            return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+        };
+        const successDeploy = { state: 'success', environments: [{ env: 'prd', state: 'success', sha: 'aaaaaaa', at: '2026-06-15T10:21:07Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' }] };
+        const failDeploy = { state: 'failure', environments: [{ env: 'prd', state: 'failure', sha: 'bbbbbbb', at: '2026-07-24T08:00:00Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' }] };
+        const unknownDeploy = { state: 'unknown', environments: [{ env: 'prd', state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: 'https://x' }] };
+
+        const { container: cSuccess } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: successDeploy, health: unknownHealth }} />);
+        expect(cSuccess.firstChild.style.background).toBe(asRgb(cardTint('success')));
+
+        const { container: cFail } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: failDeploy, health: unknownHealth }} />);
+        expect(cFail.firstChild.style.background).toBe(asRgb(cardTint('negative')));
+
+        const { container: cUnknown } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: unknownDeploy, health: unknownHealth }} />);
+        expect(cUnknown.firstChild.style.background).toBe('white');
+    });
+
+    it('viser ikke lenger den kombinerte 16px-prikken', () => {
+        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
+        const bigDots = [...container.querySelectorAll('span')].filter((s) => s.style.width === '16px');
+        expect(bigDots).toHaveLength(0);
     });
 });

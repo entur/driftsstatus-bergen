@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor } from './statusFormat.js';
+import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor, cardTint } from './statusFormat.js';
 
 describe('isStale', () => {
     const now = new Date('2026-07-24T10:00:00Z');
@@ -119,5 +119,19 @@ describe('dotColor', () => {
     });
     it('faller tilbake til nøytral grå for ukjent nøkkel', () => {
         expect(dotColor('finnesikke')).toBe('#9aa0a6');
+    });
+});
+
+describe('cardTint', () => {
+    it('gir svake muted-bakgrunnsfarger fra @entur/tokens', () => {
+        expect(cardTint('success')).toBe('#d0f1e3');
+        expect(cardTint('warning')).toBe('#fff4cd');
+        expect(cardTint('negative')).toBe('#ffcece');
+    });
+    it('gir hvit for neutral', () => {
+        expect(cardTint('neutral')).toBe('white');
+    });
+    it('faller tilbake til hvit for ukjent nøkkel', () => {
+        expect(cardTint('finnesikke')).toBe('white');
     });
 });

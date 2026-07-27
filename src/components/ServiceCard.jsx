@@ -1,6 +1,6 @@
 import React from 'react';
 import { Heading, Text } from '@entur/typography/beta';
-import { dotColor, deployColorKey, combineSeverity, envStateLabel, formatMs, formatPct, timeAgo } from '../lib/statusFormat.js';
+import { dotColor, cardTint, deployColorKey, combineSeverity, envStateLabel, formatMs, formatPct, timeAgo } from '../lib/statusFormat.js';
 
 function EnvRow({ env, now }) {
     const secondary = env.state === 'success' ? timeAgo(env.at, now) : envStateLabel(env.state);
@@ -39,14 +39,11 @@ export default function ServiceCard({ service, now = new Date() }) {
     const showMetrics = health.state !== 'unknown';
     return (
         <div style={{
-            background: 'white', borderRadius: 12, padding: '20px 24px',
+            background: cardTint(colorKey), borderRadius: 12, padding: '20px 24px',
             boxShadow: '0 1px 4px rgba(0,0,0,0.12)', display: 'flex',
             flexDirection: 'column', gap: 10, minHeight: 0
         }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 16, height: 16, borderRadius: '50%', background: dotColor(colorKey), flex: '0 0 auto' }} />
-                <Heading as="h3" variant="subtitle-1" margin="none">{service.name}</Heading>
-            </div>
+            <Heading as="h3" variant="title-2" margin="none">{service.name}</Heading>
             {deploy.environments.map((env) => <EnvRow key={env.env} env={env} now={now} />)}
             {showMetrics && (
                 <Text variant="caption" margin="none">

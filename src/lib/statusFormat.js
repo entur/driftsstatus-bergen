@@ -82,3 +82,13 @@ const DOT_COLORS = {
 export function dotColor(colorKey) {
     return DOT_COLORS[colorKey] ?? DOT_COLORS.neutral;
 }
+
+const CARD_TINTS = {
+    success: semantic.fill.success.muted,
+    warning: semantic.fill.warning.muted,
+    negative: semantic.fill.negative.muted,
+    neutral: 'white'
+};
+export function cardTint(colorKey) {
+    return CARD_TINTS[colorKey] ?? CARD_TINTS.neutral;
+}
