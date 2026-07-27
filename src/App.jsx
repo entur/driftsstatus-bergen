@@ -42,8 +42,9 @@ function App() {
 
     return (
         <div style={{ minHeight: '100vh', width: '100vw', height: '100vh', boxSizing: 'border-box', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <Contrast style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: semantic.fill.background.contrast.light, flex: '0 0 auto', padding: '10px 24px' }}>
+            <Contrast style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: semantic.fill.background.contrast.light, flex: '0 0 auto', padding: '10px 24px' }}>
                 <img src="/logo.svg" alt="Entur" style={{ height: 64, width: 'auto', objectFit: 'contain' }} />
+                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, color: '#ffffff', lineHeight: 1.2 }}>Team Produkt</h1>
             </Contrast>
 
             <div style={{ flex: '1 1 0%', minHeight: 0, background: semantic.fill.background.secondary?.default || '#f2f2f2' }}>
