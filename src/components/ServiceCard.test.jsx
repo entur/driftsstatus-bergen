@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ServiceCard from './ServiceCard.jsx';
+import { dotColor } from '../lib/statusFormat.js';
 
 const now = new Date('2026-07-24T10:00:00Z');
 
@@ -47,6 +48,26 @@ describe('ServiceCard', () => {
         };
         const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: noMsg, health: unknownHealth }} />);
         expect(container.querySelectorAll('[data-testid="commit-subject"]')).toHaveLength(0);
+    });
+
+    it('fargelegger miljø-prikken etter deploy-state (grønn/rød/grå)', () => {
+        const stateDeploy = {
+            state: 'failure',
+            environments: [
+                { env: 'prd', state: 'success', sha: 'aaaaaaa', at: '2026-06-15T10:21:07Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' },
+                { env: 'tst', state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: 'https://x' },
+                { env: 'dev', state: 'failure', sha: 'bbbbbbb', at: '2026-07-24T08:00:00Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' }
+            ]
+        };
+        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: stateDeploy, health: unknownHealth }} />);
+        const envDots = [...container.querySelectorAll('span')].filter((s) => s.style.width === '10px');
+        const backgrounds = envDots.map((s) => s.style.background);
+        // jsdom normaliserer inline hex til rgb(); konverter dotColor tilsvarende
+        const asRgb = (hex) => {
+            const n = parseInt(hex.slice(1), 16);
+            return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+        };
+        expect(backgrounds).toEqual([asRgb(dotColor('success')), asRgb(dotColor('neutral')), asRgb(dotColor('negative'))]);
     });
 
     it('viser statustekst for in_progress', () => {
