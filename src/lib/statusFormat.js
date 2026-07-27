@@ -92,3 +92,32 @@ const CARD_TINTS = {
 export function cardTint(colorKey) {
     return CARD_TINTS[colorKey] ?? CARD_TINTS.neutral;
 }
+
+export function successRate(health) {
+    const r4 = health?.errorRate4xx;
+    const r5 = health?.errorRate5xx;
+    if (r4 === null || r4 === undefined || r5 === null || r5 === undefined) return null;
+    return 1 - r4 - r5;
+}
+
+export const SUCCESS_RATE_THRESHOLDS = { good: 0.995, warn: 0.99, higherIsBetter: true };
+export const P95_THRESHOLDS = { good: 300, warn: 800, higherIsBetter: false };
+
+export function metricColorKey(value, thresholds) {
+    if (value === null || value === undefined) return 'neutral';
+    const { good, warn, higherIsBetter } = thresholds;
+    if (higherIsBetter) {
+        if (value >= good) return 'success';
+        if (value >= warn) return 'warning';
+        return 'negative';
+    }
+    if (value <= good) return 'success';
+    if (value <= warn) return 'warning';
+    return 'negative';
+}
+
+export function prdColorKey(service) {
+    const prd = service.deploy.environments.find((e) => e.env === 'prd');
+    if (!prd) return 'neutral';
+    return combineSeverity(prd.state, service.health.state);
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor, cardTint } from './statusFormat.js';
+import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor, cardTint, successRate, metricColorKey, prdColorKey, SUCCESS_RATE_THRESHOLDS, P95_THRESHOLDS } from './statusFormat.js';
 
 describe('isStale', () => {
     const now = new Date('2026-07-24T10:00:00Z');
@@ -133,5 +133,51 @@ describe('cardTint', () => {
     });
     it('faller tilbake til hvit for ukjent nøkkel', () => {
         expect(cardTint('finnesikke')).toBe('white');
+    });
+});
+
+describe('successRate', () => {
+    it('regner ut andelen som ikke er 4xx/5xx', () => {
+        expect(successRate({ errorRate4xx: 0.011, errorRate5xx: 0.002 })).toBeCloseTo(0.987, 5);
+    });
+    it('returnerer null når en rate mangler', () => {
+        expect(successRate({ errorRate4xx: null, errorRate5xx: 0.002 })).toBeNull();
+        expect(successRate({ errorRate4xx: 0.01, errorRate5xx: undefined })).toBeNull();
+    });
+});
+
+describe('metricColorKey', () => {
+    it('higherIsBetter: grønn/gul/rød etter terskel', () => {
+        expect(metricColorKey(0.999, SUCCESS_RATE_THRESHOLDS)).toBe('success');
+        expect(metricColorKey(0.995, SUCCESS_RATE_THRESHOLDS)).toBe('success');
+        expect(metricColorKey(0.992, SUCCESS_RATE_THRESHOLDS)).toBe('warning');
+        expect(metricColorKey(0.98, SUCCESS_RATE_THRESHOLDS)).toBe('negative');
+    });
+    it('lowerIsBetter: grønn/gul/rød etter terskel', () => {
+        expect(metricColorKey(142, P95_THRESHOLDS)).toBe('success');
+        expect(metricColorKey(300, P95_THRESHOLDS)).toBe('success');
+        expect(metricColorKey(500, P95_THRESHOLDS)).toBe('warning');
+        expect(metricColorKey(1200, P95_THRESHOLDS)).toBe('negative');
+    });
+    it('returnerer neutral for null/undefined', () => {
+        expect(metricColorKey(null, P95_THRESHOLDS)).toBe('neutral');
+        expect(metricColorKey(undefined, SUCCESS_RATE_THRESHOLDS)).toBe('neutral');
+    });
+});
+
+describe('prdColorKey', () => {
+    const mk = (prdState, healthState) => ({
+        deploy: { environments: [{ env: 'prd', state: prdState }, { env: 'dev', state: 'failure' }] },
+        health: { state: healthState }
+    });
+    it('bruker prd-miljøet, ikke dev', () => {
+        expect(prdColorKey(mk('success', 'unknown'))).toBe('success');
+        expect(prdColorKey(mk('failure', 'unknown'))).toBe('negative');
+    });
+    it('kombinerer med helse-state (verste vinner)', () => {
+        expect(prdColorKey(mk('success', 'down'))).toBe('negative');
+    });
+    it('neutral når prd mangler', () => {
+        expect(prdColorKey({ deploy: { environments: [{ env: 'dev', state: 'success' }] }, health: { state: 'unknown' } })).toBe('neutral');
     });
 });
