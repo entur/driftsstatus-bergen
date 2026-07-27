@@ -1,5 +1,3 @@
-// Behold fase 2 sine helse-linje-tester; legg til per-miljø-tester. Deploy-objektet
-// har nå formen { state, environments[] }.
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ServiceCard from './ServiceCard.jsx';
@@ -10,16 +8,22 @@ const now = new Date('2026-07-24T10:00:00Z');
 const deploy = {
     state: 'success',
     environments: [
-        { env: 'prd', state: 'success', sha: '965bd60', at: '2026-06-15T10:21:07Z', ticket: 'ETU-73549', pr: 411, commitMessage: 'feat: øk timeout for katalog-oppslag', url: 'https://x/prd' },
-        { env: 'tst', state: 'in_progress', sha: '6edc092', at: '2026-07-24T09:00:00Z', ticket: null, pr: 432, commitMessage: 'chore: bump avhengigheter', url: 'https://x/tst' },
-        { env: 'dev', state: 'success', sha: '6edc092', at: '2026-07-24T08:00:00Z', ticket: null, pr: 432, commitMessage: 'chore: bump avhengigheter', url: 'https://x/dev' }
+        { env: 'prd', state: 'success', sha: '965bd60', at: '2026-06-15T10:21:07Z', commitMessage: 'feat: øk timeout for katalog-oppslag', url: 'https://x/prd' },
+        { env: 'tst', state: 'in_progress', sha: '6edc092', at: '2026-07-24T09:00:00Z', commitMessage: 'chore: bump avhengigheter', url: 'https://x/tst' },
+        { env: 'dev', state: 'success', sha: '6edc092', at: '2026-07-24T08:00:00Z', commitMessage: 'chore: bump avhengigheter', url: 'https://x/dev' }
     ]
 };
 const unknownHealth = { state: 'unknown', up: null, p95Ms: null, errorRate5xx: null, errorRate4xx: null };
 const upHealth = { state: 'up', up: true, p95Ms: 142, errorRate5xx: 0.002, errorRate4xx: 0.011 };
 
+const asRgb = (hex) => {
+    if (hex === 'white') return 'white';
+    const n = parseInt(hex.slice(1), 16);
+    return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+};
+
 describe('ServiceCard', () => {
-    it('viser tjenestenavn og en rad per miljø', () => {
+    it('viser tjenestenavn og alle tre miljøene', () => {
         render(<ServiceCard now={now} service={{ name: 'products-api', repo: 'entur/products-api', deploy, health: unknownHealth }} />);
         expect(screen.getByText('products-api')).toBeInTheDocument();
         expect(screen.getByText('PRD')).toBeInTheDocument();
@@ -29,100 +33,58 @@ describe('ServiceCard', () => {
         expect(screen.getAllByText('6edc092')).toHaveLength(2);
     });
 
-    it('viser commit-subjekt per miljø og ikke lenger ETU/PR-referanse', () => {
+    it('viser helse-indikatorraden med tre ikoner', () => {
+        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: upHealth }} />);
+        const row = container.querySelector('[data-testid="health-row"]');
+        expect(row).toBeInTheDocument();
+        expect(row.querySelectorAll('svg')).toHaveLength(3);
+    });
+
+    it('viser suksessrate og p95 som verdier (ikke 4xx/5xx-tekst)', () => {
+        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: upHealth }} />);
+        // suksessrate = 1 - 0,011 - 0,002 = 0,987
+        expect(screen.getByText('98,7 %')).toBeInTheDocument();
+        expect(screen.getByText('142 ms')).toBeInTheDocument();
+        expect(screen.queryByText(/5xx/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/4xx/)).not.toBeInTheDocument();
+    });
+
+    it('viser – for verdiene når helse er unknown', () => {
+        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
+        const row = container.querySelector('[data-testid="health-row"]');
+        expect(row.textContent).toContain('–');
+    });
+
+    it('viser commit-melding kun for prd, ikke for tst/dev', () => {
         render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
         expect(screen.getByText('feat: øk timeout for katalog-oppslag')).toBeInTheDocument();
-        expect(screen.getAllByText('chore: bump avhengigheter')).toHaveLength(2);
-        expect(screen.queryByText('ETU-73549')).not.toBeInTheDocument();
-        expect(screen.queryByText('PR: 432')).not.toBeInTheDocument();
+        expect(screen.queryByText('chore: bump avhengigheter')).not.toBeInTheDocument();
     });
 
-    it('utelater commit-linja når commitMessage mangler', () => {
-        const noMsg = {
-            state: 'unknown',
-            environments: [
-                { env: 'prd', state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: 'https://x' },
-                { env: 'tst', state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: 'https://x' },
-                { env: 'dev', state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: 'https://x' }
-            ]
-        };
-        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: noMsg, health: unknownHealth }} />);
-        expect(container.querySelectorAll('[data-testid="commit-subject"]')).toHaveLength(0);
+    it('fremhever prd-prikken (14px) og gjør tst/dev kompakte (8px)', () => {
+        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
+        const dots = [...container.querySelectorAll('span')].filter((s) => s.style.borderRadius === '50%');
+        const big = dots.filter((s) => s.style.width === '14px');
+        const small = dots.filter((s) => s.style.width === '8px');
+        expect(big).toHaveLength(1);
+        expect(small).toHaveLength(2);
     });
 
-    it('fargelegger miljø-prikken etter deploy-state (grønn/rød/grå)', () => {
-        const stateDeploy = {
-            state: 'failure',
-            environments: [
-                { env: 'prd', state: 'success', sha: 'aaaaaaa', at: '2026-06-15T10:21:07Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' },
-                { env: 'tst', state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: 'https://x' },
-                { env: 'dev', state: 'failure', sha: 'bbbbbbb', at: '2026-07-24T08:00:00Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' }
-            ]
-        };
-        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: stateDeploy, health: unknownHealth }} />);
-        const envDots = [...container.querySelectorAll('span')].filter((s) => s.style.width === '10px');
-        const backgrounds = envDots.map((s) => s.style.background);
-        // jsdom normaliserer inline hex til rgb(); konverter dotColor tilsvarende
-        const asRgb = (hex) => {
-            const n = parseInt(hex.slice(1), 16);
-            return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
-        };
-        expect(backgrounds).toEqual([asRgb(dotColor('success')), asRgb(dotColor('neutral')), asRgb(dotColor('negative'))]);
-    });
-
-    it('viser statustekst for in_progress', () => {
+    it('viser statustekst for in_progress i kompakt rad', () => {
         render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
         expect(screen.getByText('deployer …')).toBeInTheDocument();
     });
 
-    it('viser "ingen data" for ukjent miljø', () => {
-        const unknownDeploy = {
-            state: 'unknown',
-            environments: [
-                { env: 'prd', state: 'unknown', sha: null, at: null, ticket: null, pr: null, url: 'https://x' },
-                { env: 'tst', state: 'unknown', sha: null, at: null, ticket: null, pr: null, url: 'https://x' },
-                { env: 'dev', state: 'unknown', sha: null, at: null, ticket: null, pr: null, url: 'https://x' }
-            ]
-        };
-        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: unknownDeploy, health: unknownHealth }} />);
-        expect(screen.getAllByText('ingen data')).toHaveLength(3);
-    });
+    it('tinter kort-bakgrunnen etter prd-status', () => {
+        const successDeploy = { state: 'success', environments: [{ env: 'prd', state: 'success', sha: 'aaaaaaa', at: '2026-06-15T10:21:07Z', commitMessage: null, url: 'https://x' }] };
+        const failDeploy = { state: 'failure', environments: [{ env: 'prd', state: 'failure', sha: 'bbbbbbb', at: '2026-07-24T08:00:00Z', commitMessage: null, url: 'https://x' }] };
+        const unknownDeploy = { state: 'unknown', environments: [{ env: 'prd', state: 'unknown', sha: null, at: null, commitMessage: null, url: 'https://x' }] };
 
-    it('skjuler metrikk-linja når helse er unknown', () => {
-        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
-        expect(screen.queryByText(/p95/)).not.toBeInTheDocument();
-    });
-
-    it('viser metrikk-linja med p95, 5xx og 4xx når helse finnes', () => {
-        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: upHealth }} />);
-        expect(screen.getByText(/p95 142 ms/)).toBeInTheDocument();
-        expect(screen.getByText(/5xx 0,2 %/)).toBeInTheDocument();
-        expect(screen.getByText(/4xx 1,1 %/)).toBeInTheDocument();
-    });
-
-    it('tinter kort-bakgrunnen etter overall-status', () => {
-        const asRgb = (hex) => {
-            if (hex === 'white') return 'white';
-            const n = parseInt(hex.slice(1), 16);
-            return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
-        };
-        const successDeploy = { state: 'success', environments: [{ env: 'prd', state: 'success', sha: 'aaaaaaa', at: '2026-06-15T10:21:07Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' }] };
-        const failDeploy = { state: 'failure', environments: [{ env: 'prd', state: 'failure', sha: 'bbbbbbb', at: '2026-07-24T08:00:00Z', ticket: null, pr: null, commitMessage: null, url: 'https://x' }] };
-        const unknownDeploy = { state: 'unknown', environments: [{ env: 'prd', state: 'unknown', sha: null, at: null, ticket: null, pr: null, commitMessage: null, url: 'https://x' }] };
-
-        const { container: cSuccess } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: successDeploy, health: unknownHealth }} />);
-        expect(cSuccess.firstChild.style.background).toBe(asRgb(cardTint('success')));
-
-        const { container: cFail } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: failDeploy, health: unknownHealth }} />);
-        expect(cFail.firstChild.style.background).toBe(asRgb(cardTint('negative')));
-
-        const { container: cUnknown } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: unknownDeploy, health: unknownHealth }} />);
-        expect(cUnknown.firstChild.style.background).toBe('white');
-    });
-
-    it('viser ikke lenger den kombinerte 16px-prikken', () => {
-        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
-        const bigDots = [...container.querySelectorAll('span')].filter((s) => s.style.width === '16px');
-        expect(bigDots).toHaveLength(0);
+        const { container: cS } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: successDeploy, health: unknownHealth }} />);
+        expect(cS.firstChild.style.background).toBe(asRgb(cardTint('success')));
+        const { container: cF } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: failDeploy, health: unknownHealth }} />);
+        expect(cF.firstChild.style.background).toBe(asRgb(cardTint('negative')));
+        const { container: cU } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: unknownDeploy, health: unknownHealth }} />);
+        expect(cU.firstChild.style.background).toBe('white');
     });
 });
