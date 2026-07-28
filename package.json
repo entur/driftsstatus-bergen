@@ -18,7 +18,7 @@
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^5.1.2",
 		"firebase-tools": "^15.24.0",
-		"jsdom": "^25",
+		"jsdom": "^30",
 		"vite": "^8.0.16",
 		"vitest": "^3"
 	},
