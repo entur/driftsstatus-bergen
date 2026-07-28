@@ -27,7 +27,7 @@
 		"@entur/icons": "^8.4.0",
 		"@entur/layout": "^3.7.5",
 		"@entur/tooltip": "^5.3.1",
-		"@entur/travel": "^6.5.1",
+		"@entur/travel": "^7.0.4",
 		"@entur/typography": "^2.1.1",
 		"@tailwindcss/vite": "^4.1.18",
 		"date-fns": "^4.1.0",
