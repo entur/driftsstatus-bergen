@@ -5,7 +5,7 @@ import PieChart from './PieChart.jsx';
 import {
     dotColor, cardTint, prdColorKey, healthColorKey, deployColorKey,
     pickMetric, responseBreakdown, formatUptime15m, formatMs,
-    envStateLabel, timeAgo
+    envStateLabel, timeAgo, hasCompleteHeroData
 } from '../lib/statusFormat.js';
 
 function Heartbeat({ health }) {
@@ -75,6 +75,15 @@ function DeploySection({ env, now }) {
     );
 }
 
+function SheepPlaceholder() {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+            <img src="/sheep.svg" alt="" width={130} height={130} style={{ maxWidth: '100%', height: 'auto' }} />
+            <Text variant="body" margin="none" style={{ fontWeight: 600, opacity: 0.8 }}>Venter på data</Text>
+        </div>
+    );
+}
+
 export default function ServiceCard({ service, now = new Date() }) {
     const { deploy, health, metrics } = service;
     const prd = deploy.environments.find((e) => e.env === 'prd');
@@ -85,14 +94,20 @@ export default function ServiceCard({ service, now = new Date() }) {
             flexDirection: 'column', gap: 12, minHeight: 0
         }}>
             <Heading as="h3" variant="title-1" margin="none" style={{ fontSize: 28 }}>{service.name}</Heading>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-                <PieChart breakdown={responseBreakdown(metrics)} size={118} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
-                    <Heartbeat health={health} />
-                    <ResponseTime metrics={metrics} />
-                </div>
-            </div>
-            <Legend />
+            {hasCompleteHeroData(service) ? (
+                <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                        <PieChart breakdown={responseBreakdown(metrics)} size={118} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
+                            <Heartbeat health={health} />
+                            <ResponseTime metrics={metrics} />
+                        </div>
+                    </div>
+                    <Legend />
+                </>
+            ) : (
+                <SheepPlaceholder />
+            )}
             {prd && <DeploySection env={prd} now={now} />}
         </div>
     );

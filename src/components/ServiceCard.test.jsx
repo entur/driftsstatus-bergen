@@ -34,13 +34,11 @@ describe('ServiceCard v2', () => {
         expect(screen.getByTestId('pie').dataset.ok).toBe('0.94');
     });
 
-    it('hjertefargen følger health.state', () => {
+    it('hjertefargen følger health.state (når hero vises)', () => {
         const { rerender } = render(<ServiceCard now={now} service={svc({ health: { state: 'up', up: true, uptime15m: 1 } })} />);
         expect(screen.getByTestId('heart').style.color).toBe(asRgb(dotColor('success')));
         rerender(<ServiceCard now={now} service={svc({ health: { state: 'down', up: false, uptime15m: 0.2 } })} />);
         expect(screen.getByTestId('heart').style.color).toBe(asRgb(dotColor('negative')));
-        rerender(<ServiceCard now={now} service={svc({ health: { state: 'unknown', up: null, uptime15m: null } })} />);
-        expect(screen.getByTestId('heart').style.color).toBe(asRgb(dotColor('neutral')));
     });
 
     it('kaka bruker window og faller til lifetime per felt', () => {
@@ -49,11 +47,8 @@ describe('ServiceCard v2', () => {
         expect(screen.getByText('60 ms')).toBeInTheDocument();
     });
 
-    it('viser tom kake og – når metrikk mangler', () => {
-        render(<ServiceCard now={now} service={svc({ metrics: { window: {}, lifetime: {} } })} />);
-        expect(screen.getByTestId('pie').dataset.empty).toBe('true');
-        expect(screen.getByText('–')).toBeInTheDocument();
-    });
+    // Merk: manglende metrikk gir nå sau-placeholder (ikke tom kake) — se
+    // «ServiceCard sau-placeholder» under. Tom kake dekkes av PieChart-testen.
 
     it('viser deploy-seksjon med upload-ikon, sha, tid og commit-melding', () => {
         const { container } = render(<ServiceCard now={now} service={svc()} />);
@@ -75,5 +70,26 @@ describe('ServiceCard v2', () => {
     it('tinter kort-bakgrunnen etter prod-status', () => {
         const { container } = render(<ServiceCard now={now} service={svc({ deploy: { state: 'failure', environments: [{ env: 'prd', state: 'failure', sha: 'bbbbbbb', at: '2026-07-27T08:00:00Z', commitMessage: null, url: 'https://x' }] } })} />);
         expect(container.firstChild.style.background).toBe(asRgb(cardTint('negative')));
+    });
+});
+
+describe('ServiceCard sau-placeholder', () => {
+    it('viser sau og skjuler hero når metrics mangler', () => {
+        const { container } = render(<ServiceCard now={now} service={svc({ metrics: { window: {}, lifetime: {} } })} />);
+        const sheep = container.querySelector('img[src="/sheep.svg"]');
+        expect(sheep).toBeInTheDocument();
+        expect(screen.getByText('Venter på data')).toBeInTheDocument();
+        expect(container.querySelector('[data-testid="pie"]')).not.toBeInTheDocument();
+        expect(container.querySelector('[data-testid="heart"]')).not.toBeInTheDocument();
+        expect(container.querySelector('[data-testid="deploy"]')).toBeInTheDocument();
+    });
+    it('viser sau når health er unknown selv om metrics finnes', () => {
+        const { container } = render(<ServiceCard now={now} service={svc({ health: { state: 'unknown', up: null, uptime15m: null } })} />);
+        expect(container.querySelector('img[src="/sheep.svg"]')).toBeInTheDocument();
+    });
+    it('viser hero (ikke sau) når data er komplett', () => {
+        const { container } = render(<ServiceCard now={now} service={svc()} />);
+        expect(container.querySelector('img[src="/sheep.svg"]')).not.toBeInTheDocument();
+        expect(container.querySelector('[data-testid="pie"]')).toBeInTheDocument();
     });
 });
