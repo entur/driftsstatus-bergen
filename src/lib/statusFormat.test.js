@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor, cardTint, successRate, metricColorKey, prdColorKey, SUCCESS_RATE_THRESHOLDS, P95_THRESHOLDS } from './statusFormat.js';
+import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor, cardTint, successRate, metricColorKey, prdColorKey, SUCCESS_RATE_THRESHOLDS, P95_THRESHOLDS, pickMetric, responseBreakdown, formatUptime15m } from './statusFormat.js';
 
 describe('isStale', () => {
     const now = new Date('2026-07-24T10:00:00Z');
@@ -179,5 +179,51 @@ describe('prdColorKey', () => {
     });
     it('neutral når prd mangler', () => {
         expect(prdColorKey({ deploy: { environments: [{ env: 'dev', state: 'success' }] }, health: { state: 'unknown' } })).toBe('neutral');
+    });
+});
+
+describe('pickMetric', () => {
+    const metrics = { window: { avgMs: 71, errorRate4xx: 0, errorRate5xx: null }, lifetime: { avgMs: 60, errorRate4xx: 0.01, errorRate5xx: 0.002 } };
+    it('bruker window når feltet finnes', () => {
+        expect(pickMetric(metrics, 'avgMs')).toBe(71);
+        expect(pickMetric(metrics, 'errorRate4xx')).toBe(0);
+    });
+    it('faller til lifetime når window-feltet er null', () => {
+        expect(pickMetric(metrics, 'errorRate5xx')).toBe(0.002);
+    });
+    it('returnerer null når begge mangler', () => {
+        expect(pickMetric({ window: {}, lifetime: {} }, 'avgMs')).toBeNull();
+        expect(pickMetric(undefined, 'avgMs')).toBeNull();
+        expect(pickMetric(null, 'avgMs')).toBeNull();
+    });
+});
+
+describe('responseBreakdown', () => {
+    it('regner ok/c4/c5 med window-først', () => {
+        const m = { window: { errorRate4xx: 0.04, errorRate5xx: 0.02 } };
+        expect(responseBreakdown(m)).toEqual({ ok: 0.94, c4: 0.04, c5: 0.02 });
+    });
+    it('faller til lifetime per felt', () => {
+        const m = { window: { errorRate4xx: 0, errorRate5xx: null }, lifetime: { errorRate4xx: 0.1, errorRate5xx: 0.05 } };
+        expect(responseBreakdown(m)).toEqual({ ok: 0.95, c4: 0, c5: 0.05 });
+    });
+    it('klamper ok til minst 0', () => {
+        const m = { window: { errorRate4xx: 0.7, errorRate5xx: 0.5 } };
+        expect(responseBreakdown(m).ok).toBe(0);
+    });
+    it('returnerer null når en rate mangler i begge vindu', () => {
+        expect(responseBreakdown({ window: {}, lifetime: {} })).toBeNull();
+        expect(responseBreakdown(undefined)).toBeNull();
+    });
+});
+
+describe('formatUptime15m', () => {
+    it('formatterer andel som heltallsprosent', () => {
+        expect(formatUptime15m(1)).toBe('100 %');
+        expect(formatUptime15m(0.933)).toBe('93 %');
+    });
+    it('null/undefined gir tankestrek', () => {
+        expect(formatUptime15m(null)).toBe('–');
+        expect(formatUptime15m(undefined)).toBe('–');
     });
 });

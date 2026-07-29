@@ -121,3 +121,23 @@ export function prdColorKey(service) {
     if (!prd) return 'neutral';
     return combineSeverity(prd.state, service.health.state);
 }
+
+export function pickMetric(metrics, field) {
+    const w = metrics?.window?.[field];
+    if (w !== null && w !== undefined) return w;
+    const l = metrics?.lifetime?.[field];
+    if (l !== null && l !== undefined) return l;
+    return null;
+}
+
+export function responseBreakdown(metrics) {
+    const c4 = pickMetric(metrics, 'errorRate4xx');
+    const c5 = pickMetric(metrics, 'errorRate5xx');
+    if (c4 === null || c5 === null) return null;
+    return { ok: Math.max(0, 1 - c4 - c5), c4, c5 };
+}
+
+export function formatUptime15m(fraction) {
+    if (fraction === null || fraction === undefined) return '–';
+    return `${Math.round(fraction * 100)} %`;
+}
