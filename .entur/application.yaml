@@ -2,9 +2,9 @@ apiVersion: orchestrator.entur.io/apps/v1
 kind: GoogleCloudFirebaseApplication
 metadata:
   id: statusber
-  displayName: Driftstatus Bergen
-  name: driftsstatus-bergen
+  displayName: Statusskjerm Produkt
+  name: statusskjerm-produkt
   owner: team-produkt
 spec:
   environments: [prd]
-  repositories: [driftsstatus-bergen]
+  repositories: [statusskjerm-produkt]
