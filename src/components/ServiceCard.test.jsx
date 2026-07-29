@@ -3,18 +3,7 @@ import { render, screen } from '@testing-library/react';
 import ServiceCard from './ServiceCard.jsx';
 import { dotColor, cardTint } from '../lib/statusFormat.js';
 
-const now = new Date('2026-07-24T10:00:00Z');
-
-const deploy = {
-    state: 'success',
-    environments: [
-        { env: 'prd', state: 'success', sha: '965bd60', at: '2026-06-15T10:21:07Z', commitMessage: 'feat: øk timeout for katalog-oppslag', url: 'https://x/prd' },
-        { env: 'tst', state: 'in_progress', sha: '6edc092', at: '2026-07-24T09:00:00Z', commitMessage: 'chore: bump avhengigheter', url: 'https://x/tst' },
-        { env: 'dev', state: 'success', sha: '6edc092', at: '2026-07-24T08:00:00Z', commitMessage: 'chore: bump avhengigheter', url: 'https://x/dev' }
-    ]
-};
-const unknownHealth = { state: 'unknown', up: null, p95Ms: null, errorRate5xx: null, errorRate4xx: null };
-const upHealth = { state: 'up', up: true, p95Ms: 142, errorRate5xx: 0.002, errorRate4xx: 0.011 };
+const now = new Date('2026-07-29T12:00:00Z');
 
 const asRgb = (hex) => {
     if (hex === 'white') return 'white';
@@ -22,69 +11,69 @@ const asRgb = (hex) => {
     return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 };
 
-describe('ServiceCard', () => {
-    it('viser tjenestenavn og alle tre miljøene', () => {
-        render(<ServiceCard now={now} service={{ name: 'products-api', repo: 'entur/products-api', deploy, health: unknownHealth }} />);
-        expect(screen.getByText('products-api')).toBeInTheDocument();
-        expect(screen.getByText('PRD')).toBeInTheDocument();
-        expect(screen.getByText('TST')).toBeInTheDocument();
-        expect(screen.getByText('DEV')).toBeInTheDocument();
-        expect(screen.getByText('965bd60')).toBeInTheDocument();
-        expect(screen.getAllByText('6edc092')).toHaveLength(2);
+const deploy = {
+    state: 'success',
+    environments: [
+        { env: 'prd', state: 'success', sha: 'f731fea', at: '2026-07-23T11:35:49Z', commitMessage: 'ETU-74290: Add private_codes table (#1716)', url: 'https://x/prd' },
+        { env: 'tst', state: 'success', sha: 'f731fea', at: '2026-07-23T10:37:03Z', commitMessage: 'ETU-74290: Add private_codes table (#1716)', url: 'https://x/tst' },
+        { env: 'dev', state: 'failure', sha: '94752e5', at: '2026-07-27T07:01:17Z', commitMessage: 'Bump dep (#1764)', url: 'https://x/dev' }
+    ]
+};
+const health = { state: 'up', up: true, uptime15m: 1 };
+const metrics = { window: { avgMs: 71, errorRate4xx: 0.04, errorRate5xx: 0.02 }, lifetime: { avgMs: 60, errorRate4xx: 0.01, errorRate5xx: 0.002 } };
+
+const svc = (over = {}) => ({ name: 'products-spring', repo: 'entur/products-spring', deploy, health, metrics, ...over });
+
+describe('ServiceCard v2', () => {
+    it('viser tjenestenavn, oppetid, snitt responstid og kake', () => {
+        render(<ServiceCard now={now} service={svc()} />);
+        expect(screen.getByText('products-spring')).toBeInTheDocument();
+        expect(screen.getByText('Oppe')).toBeInTheDocument();
+        expect(screen.getByText(/100 % oppe siste 15 min/)).toBeInTheDocument();
+        expect(screen.getByText('71 ms')).toBeInTheDocument();
+        expect(screen.getByTestId('pie').dataset.ok).toBe('0.94');
     });
 
-    it('viser helse-indikatorraden med tre ikoner', () => {
-        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: upHealth }} />);
-        const row = container.querySelector('[data-testid="health-row"]');
-        expect(row).toBeInTheDocument();
-        expect(row.querySelectorAll('svg')).toHaveLength(3);
+    it('hjertefargen følger health.state', () => {
+        const { rerender } = render(<ServiceCard now={now} service={svc({ health: { state: 'up', up: true, uptime15m: 1 } })} />);
+        expect(screen.getByTestId('heart').style.color).toBe(asRgb(dotColor('success')));
+        rerender(<ServiceCard now={now} service={svc({ health: { state: 'down', up: false, uptime15m: 0.2 } })} />);
+        expect(screen.getByTestId('heart').style.color).toBe(asRgb(dotColor('negative')));
+        rerender(<ServiceCard now={now} service={svc({ health: { state: 'unknown', up: null, uptime15m: null } })} />);
+        expect(screen.getByTestId('heart').style.color).toBe(asRgb(dotColor('neutral')));
     });
 
-    it('viser suksessrate og p95 som verdier (ikke 4xx/5xx-tekst)', () => {
-        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: upHealth }} />);
-        // suksessrate = 1 - 0,011 - 0,002 = 0,987
-        expect(screen.getByText('98,7 %')).toBeInTheDocument();
-        expect(screen.getByText('142 ms')).toBeInTheDocument();
-        expect(screen.queryByText(/5xx/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/4xx/)).not.toBeInTheDocument();
+    it('kaka bruker window og faller til lifetime per felt', () => {
+        render(<ServiceCard now={now} service={svc({ metrics: { window: { avgMs: null, errorRate4xx: 0, errorRate5xx: null }, lifetime: { avgMs: 60, errorRate4xx: 0.1, errorRate5xx: 0.05 } } })} />);
+        expect(screen.getByTestId('pie').dataset.c5).toBe('0.05');
+        expect(screen.getByText('60 ms')).toBeInTheDocument();
     });
 
-    it('viser – for verdiene når helse er unknown', () => {
-        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
-        const row = container.querySelector('[data-testid="health-row"]');
-        expect(row.textContent).toContain('–');
+    it('viser tom kake og – når metrikk mangler', () => {
+        render(<ServiceCard now={now} service={svc({ metrics: { window: {}, lifetime: {} } })} />);
+        expect(screen.getByTestId('pie').dataset.empty).toBe('true');
+        expect(screen.getByText('–')).toBeInTheDocument();
     });
 
-    it('viser commit-melding kun for prd, ikke for tst/dev', () => {
-        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
-        expect(screen.getByText('feat: øk timeout for katalog-oppslag')).toBeInTheDocument();
-        expect(screen.queryByText('chore: bump avhengigheter')).not.toBeInTheDocument();
+    it('viser deploy-seksjon med upload-ikon, sha, tid og commit-melding', () => {
+        const { container } = render(<ServiceCard now={now} service={svc()} />);
+        const deploySec = container.querySelector('[data-testid="deploy"]');
+        expect(deploySec).toBeInTheDocument();
+        expect(deploySec.querySelector('svg')).toBeInTheDocument();
+        expect(screen.getByText('f731fea')).toBeInTheDocument();
+        expect(screen.getByText(/Deployet/)).toBeInTheDocument();
+        expect(screen.getByText('ETU-74290: Add private_codes table (#1716)')).toBeInTheDocument();
     });
 
-    it('fremhever prd-prikken (14px) og gjør tst/dev kompakte (8px)', () => {
-        const { container } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
-        const dots = [...container.querySelectorAll('span')].filter((s) => s.style.borderRadius === '50%');
-        const big = dots.filter((s) => s.style.width === '14px');
-        const small = dots.filter((s) => s.style.width === '8px');
-        expect(big).toHaveLength(1);
-        expect(small).toHaveLength(2);
+    it('viser kun prod — ingen tst/dev', () => {
+        render(<ServiceCard now={now} service={svc()} />);
+        expect(screen.queryByText('TST')).not.toBeInTheDocument();
+        expect(screen.queryByText('DEV')).not.toBeInTheDocument();
+        expect(screen.queryByText('94752e5')).not.toBeInTheDocument();
     });
 
-    it('viser statustekst for in_progress i kompakt rad', () => {
-        render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy, health: unknownHealth }} />);
-        expect(screen.getByText('deployer …')).toBeInTheDocument();
-    });
-
-    it('tinter kort-bakgrunnen etter prd-status', () => {
-        const successDeploy = { state: 'success', environments: [{ env: 'prd', state: 'success', sha: 'aaaaaaa', at: '2026-06-15T10:21:07Z', commitMessage: null, url: 'https://x' }] };
-        const failDeploy = { state: 'failure', environments: [{ env: 'prd', state: 'failure', sha: 'bbbbbbb', at: '2026-07-24T08:00:00Z', commitMessage: null, url: 'https://x' }] };
-        const unknownDeploy = { state: 'unknown', environments: [{ env: 'prd', state: 'unknown', sha: null, at: null, commitMessage: null, url: 'https://x' }] };
-
-        const { container: cS } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: successDeploy, health: unknownHealth }} />);
-        expect(cS.firstChild.style.background).toBe(asRgb(cardTint('success')));
-        const { container: cF } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: failDeploy, health: unknownHealth }} />);
-        expect(cF.firstChild.style.background).toBe(asRgb(cardTint('negative')));
-        const { container: cU } = render(<ServiceCard now={now} service={{ name: 'a', repo: 'entur/a', deploy: unknownDeploy, health: unknownHealth }} />);
-        expect(cU.firstChild.style.background).toBe('white');
+    it('tinter kort-bakgrunnen etter prod-status', () => {
+        const { container } = render(<ServiceCard now={now} service={svc({ deploy: { state: 'failure', environments: [{ env: 'prd', state: 'failure', sha: 'bbbbbbb', at: '2026-07-27T08:00:00Z', commitMessage: null, url: 'https://x' }] } })} />);
+        expect(container.firstChild.style.background).toBe(asRgb(cardTint('negative')));
     });
 });
