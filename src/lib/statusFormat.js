@@ -118,3 +118,12 @@ export function formatUptime15m(fraction) {
     if (fraction === null || fraction === undefined) return '–';
     return `${Math.round(fraction * 100)} %`;
 }
+
+export function hasCompleteHeroData(service) {
+    const state = service?.health?.state;
+    if (!state || state === 'unknown') return false;
+    if (service.health.uptime15m === null || service.health.uptime15m === undefined) return false;
+    if (responseBreakdown(service.metrics) === null) return false;
+    if (pickMetric(service.metrics, 'avgMs') === null) return false;
+    return true;
+}

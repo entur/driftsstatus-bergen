@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor, cardTint, prdColorKey, pickMetric, responseBreakdown, formatUptime15m } from './statusFormat.js';
+import { isStale, deployLabel, deployColorKey, timeAgo, healthColorKey, combineSeverity, formatMs, formatPct, envStateLabel, deployRef, dotColor, cardTint, prdColorKey, pickMetric, responseBreakdown, formatUptime15m, hasCompleteHeroData } from './statusFormat.js';
 
 describe('isStale', () => {
     const now = new Date('2026-07-24T10:00:00Z');
@@ -196,5 +196,24 @@ describe('formatUptime15m', () => {
     it('null/undefined gir tankestrek', () => {
         expect(formatUptime15m(null)).toBe('–');
         expect(formatUptime15m(undefined)).toBe('–');
+    });
+});
+
+describe('hasCompleteHeroData', () => {
+    const full = { health: { state: 'up', up: true, uptime15m: 1 }, metrics: { window: { avgMs: 71, errorRate4xx: 0, errorRate5xx: 0 } } };
+    it('true når health og metrics er komplett', () => {
+        expect(hasCompleteHeroData(full)).toBe(true);
+    });
+    it('false når health.state er unknown', () => {
+        expect(hasCompleteHeroData({ ...full, health: { state: 'unknown', up: null, uptime15m: null } })).toBe(false);
+    });
+    it('false når uptime15m mangler', () => {
+        expect(hasCompleteHeroData({ ...full, health: { state: 'up', up: true, uptime15m: null } })).toBe(false);
+    });
+    it('false når metrics mangler', () => {
+        expect(hasCompleteHeroData({ ...full, metrics: { window: {}, lifetime: {} } })).toBe(false);
+    });
+    it('false når avgMs mangler i begge vindu', () => {
+        expect(hasCompleteHeroData({ ...full, metrics: { window: { avgMs: null, errorRate4xx: 0, errorRate5xx: 0 } } })).toBe(false);
     });
 });
