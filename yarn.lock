@@ -307,7 +307,7 @@
     "@entur/utils" "^0.13.6"
     classnames "^2.5.1"
 
-"@entur/form@^9.3.3":
+"@entur/form@^9.3.8":
   version "9.3.8"
   resolved "https://registry.yarnpkg.com/@entur/form/-/form-9.3.8.tgz#b0afc90e4810bfcd8c63bbb5c32c91fcc764f775"
   integrity sha512-46kP2ZiRgdXrDMx4/qkFvT4wONjAraTrJ0DLEM3rx4eKGi4e9DtpP/AEoGF2uk4BlclZJfxU8lvXLXeDleDMhw==
@@ -329,7 +329,7 @@
     "@entur/utils" "^0.13.6"
     classnames "^2.5.1"
 
-"@entur/icons@^8.4.0", "@entur/icons@^8.4.6":
+"@entur/icons@^8.4.0":
   version "8.4.6"
   resolved "https://registry.yarnpkg.com/@entur/icons/-/icons-8.4.6.tgz#6f361c516ad7cde472d6130770490a845c35eab3"
   integrity sha512-UfhokRfjXG/JOwJPp9ievBBaH2gExO4kAWeUTmvkhB7E+mNXpbdu3SUXwJQqBonOoOdTvk/1U/7zUcn/7YRoWQ==
@@ -343,7 +343,7 @@
   dependencies:
     "@entur/tokens" "^3.24.0"
 
-"@entur/layout@^3.7.0", "@entur/layout@^3.7.5":
+"@entur/layout@^3.7.5":
   version "3.7.5"
   resolved "https://registry.yarnpkg.com/@entur/layout/-/layout-3.7.5.tgz#32e3e6049077f30070b27625161e1e0a6df7b3e3"
   integrity sha512-cUR5wyxOA/+4Fpt1rlLzJ2wz5Uwv8j+gSmL1Qjfxc8c/Vly1BlWqKe+Xsvmk5hoSzvPDkt62QSQfDYf0c50uIw==
@@ -386,16 +386,16 @@
     "@floating-ui/react-dom" "^2.1.6"
     classnames "^2.5.1"
 
-"@entur/travel@^6.5.1":
-  version "6.5.11"
-  resolved "https://registry.yarnpkg.com/@entur/travel/-/travel-6.5.11.tgz#1818f197c11fde572552925c40cbbda5e0a7fc49"
-  integrity sha512-t88a+wnVajxwepeqHfEfDn77oJJpS9kRol0hltlTTm604mLvosbDy/Q6wp4JnNX7inf7dukc95PLMesYrC+LwA==
+"@entur/travel@^7.0.4":
+  version "7.0.4"
+  resolved "https://registry.yarnpkg.com/@entur/travel/-/travel-7.0.4.tgz#9d677c1d68b6aa4690847c6227a9730f1ba8b143"
+  integrity sha512-UJsak2FLhxyVcJoU7amRtNwdSW/yJ8WSqM2Jfxp36DowpxyH1QsScEjEPkLUY8WnYD8h2YzYUk8MkFUsCumJQQ==
   dependencies:
-    "@entur/form" "^9.3.3"
-    "@entur/icons" "^8.4.6"
-    "@entur/layout" "^3.7.0"
-    "@entur/tokens" "^3.22.5"
-    "@entur/utils" "^0.13.4"
+    "@entur/form" "^9.3.8"
+    "@entur/icons" "^9.0.4"
+    "@entur/layout" "^3.7.5"
+    "@entur/tokens" "^3.24.0"
+    "@entur/utils" "^0.13.6"
     classnames "^2.5.1"
 
 "@entur/typography@^2.1.1", "@entur/typography@^2.1.12":
@@ -411,7 +411,7 @@
   optionalDependencies:
     glob "^13.0.4"
 
-"@entur/utils@^0.13.4", "@entur/utils@^0.13.6":
+"@entur/utils@^0.13.6":
   version "0.13.6"
   resolved "https://registry.yarnpkg.com/@entur/utils/-/utils-0.13.6.tgz#a4d8a07bcb766e21934f7915a67adf242c9ce73f"
   integrity sha512-7r7Ym6/eMhJDj2LE4dk8pXIwezB6XY1RA1IphD0dCYp7LWyKU8dxZsofrtu6NSwxREynmOpHiswsFA3lZIacgQ==
